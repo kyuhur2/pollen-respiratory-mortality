@@ -246,6 +246,8 @@ interactive <- read.csv(file=paste0(root_dir, "/data/interactive.csv"))
 
 # metafor: combine non-iteractive results -----------------------------------------------------
 
+mixmeta?
+
 library(metafor)
 library(data.table)
 library(gridExtra)
@@ -387,3 +389,4 @@ legend(
 )
 
 dev.off()
+

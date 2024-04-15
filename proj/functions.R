@@ -139,11 +139,12 @@ run_interactive_glm_model <- function(
   # run glm model for all exposure x lag_ pairs; collect data into model_result_collector
   for(k in 0:lag_){
     adjusted_lagged_exposure <- data[, paste0(exposure, k)] / 10  # adjusted by 10
-    lagged_interactive <- factor(cut(data[, paste0(interactive, k)], breaks = 4, labels = FALSE))
+    lagged_interactive <- factor(cut(data[, paste0(interactive, k)], breaks = 4, labels = FALSE))  # look into cut()
 
     # run model
     model_result <- glm(
       data[, outcome] ~
+        lagged_interactive +
         adjusted_lagged_exposure:lagged_interactive +
         factor(data[, asian_dust_days]) +
         factor(data[, holiday]) +
@@ -175,7 +176,7 @@ run_interactive_glm_model <- function(
       paste(name, model_metadata[[1]][[name]], sep = "=")
     }), collapse = "; ")
     
-    # collect results based on IQR
+    # collect results based on adjusted_lagged_exposure
     ci <- as.vector(t(ci.exp(model_result, subset="adjusted_lagged_exposure")))  # results
     
     model_result_collector[[length(model_result_collector) + 1]] <- c(
