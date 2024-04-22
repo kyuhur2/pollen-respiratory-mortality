@@ -104,6 +104,7 @@ run_interactive_glm_model <- function(
   outcome,
   exposure,
   interactive,
+  quantile_type,
   lag_,
   asian_dust_days,
   holiday,
@@ -120,6 +121,10 @@ run_interactive_glm_model <- function(
   if(!is.data.frame(data)) stop("Input 'data' not 'data.frame' type.")
   if(!is.character(outcome)) stop("Input 'outcome' not 'character type.")
   if(!is.character(exposure)) stop("Input 'exposure' not 'character' type.")
+  if(!is.character(interactive)) stop("Input 'interactive' not 'character' type.")
+  if (!is.character(quantile_type) || !(quantile_type %in% c("quartile", "tercile", "bisection"))) {
+    stop("Invalid input: 'quantile_type' must be one of 'quartile', 'tercile', or 'bisection'.")
+  }
   if(!is.numeric(lag_)) stop("Input 'lag_' not 'nuemeric' type.")
   if(!is.character(asian_dust_days)) stop("Input 'asian_dust_days' not 'character' type.")
   if(!is.character(holiday)) stop("Input 'holiday' not 'character' type.")
@@ -139,7 +144,7 @@ run_interactive_glm_model <- function(
   # run glm model for all exposure x lag_ pairs; collect data into model_result_collector
   for(k in 0:lag_){
     adjusted_lagged_exposure <- data[, paste0(exposure, k)] / 10  # adjusted by 10
-    lagged_interactive <- factor(cut(data[, paste0(interactive, k)], breaks = 4, labels = FALSE))  # look into cut()
+    lagged_interactive <- as.factor(data[, paste0(interactive, "0", quantile_type)])
 
     # run model
     model_result <- glm(
@@ -163,6 +168,7 @@ run_interactive_glm_model <- function(
       exposure = exposure,
       k = k,
       interactive = interactive,
+      quantile_type = quantile_type,
       asian_dust_days = asian_dust_days,
       holiday = holiday,
       relative_humidity_mean = relative_humidity_mean,
@@ -196,11 +202,7 @@ run_interactive_glm_model <- function(
   row_names <- gsub("adjusted_lagged_exposure", "exposure", row_names)
   row_names <- gsub("lagged_interactive", "interactive", row_names)
   colnames(model_result_collector) <- c(
-    paste0(
-      rep(row_names, each=3),
-      "; ",
-      c("rr", "cil", "ciu")
-    ),
+    paste0(rep(row_names, each=3), "-", c("rr", "cil", "ciu")),
     "metadata"
   )
 
@@ -208,40 +210,53 @@ run_interactive_glm_model <- function(
   model_result_collector["city"] <- city  
   model_result_collector[, "exposure"] <- c(paste0(exposure, 0:lag_))
   model_result_collector["outcome"] <- outcome
+  model_result_collector["quantile_type"] <- quantile_type
 
   # validate output
   if(!is.data.frame(model_result_collector)) stop(
     "Output 'model_result_collector' not 'data.frame type."
   )
-  
+
   return(model_result_collector)
 }
 
-meta <- function(
+metafor_meta <- function(
   data,
   lag_,
   exposure,
   coef
 ) {
+  # calculate iqr for each column related to "exposure" in data
   iqr <- sapply(data, function(x) IQR(x[, exposure], na.rm=TRUE))
-  cmb <- matrix(
-    numeric(),
-    nrow=lag_,
-    ncol=4,
-    dimnames=list(lag_, c("est", "se", "I2", "p.Qtest"))
+  iqr_mean <- mean(iqr)
+  
+  # initialize matrix for results
+  results <- matrix(
+    numeric(0), nrow = lag_, ncol = 6,
+    dimnames = list(NULL, c("est", "se", "I2", "p.Qtest", "rr", "cil", "ciu"))
   )
   
-  for (lag in seq(lag_)) {
+  # loop through each lag and perform meta-analysis
+  for (lag in seq_len(lag_)) {
     est <- sapply(coef, function(x) x[lag, "B"])
     se <- sapply(coef, function(x) x[lag, "se"])
-    meta_ <- metafor::rma(yi=est, sei=se, data=cbind(est, se), method="REML")
-    cmb[lag, ] <- c(meta$b, meta$se, meta$I2, meta$QEp)
+    
+    # random effects meta-analysis
+    meta_analysis <- metafor::rma(yi = est, sei = se, data = cbind(est, se), method = "REML")
+    
+    # store results from meta-analysis in matrix
+    results[lag, 1:4] <- c(meta_analysis$b, meta_analysis$se, meta_analysis$I2, meta_analysis$QEp)
+    
+    # calculate relative risk (RR) and confidence intervals (CI)
+    results[lag, "rr"] <- exp(meta_analysis$b * iqr_mean)
+    results[lag, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqr_mean)
+    results[lag, "ciu"] <- exp((meta_analysis$b + 1.96 * meta_analysis$se) * iqr_mean)
   }
   
-  iqrm <- mean(iqr)
-  f <- data.frame(exposure, iqrm, cmb)
-  f["rr"] <- exp(f$est * iqrm)
-  f["cil"] <- exp((f$est - 1.96 * f$se) * iqrm)
-  f["ciu"] <- exp((f$est + 1.96 * f$se) * iqrm)
-  return(f)
+  # Convert matrix to data frame
+  df_results <- as.data.frame(results)
+  df_results$exposure <- exposure
+  df_results$iqrm <- iqr_mean
+
+  return(df_results)
 }
