@@ -2,3 +2,5 @@
 **/.R*
 *.csv
 *.RData
+
+data/
