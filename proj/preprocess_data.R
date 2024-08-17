@@ -1,13 +1,9 @@
+
 library(dplyr)
 
 # functions -----------------------------------------------------------------------------------
 
-tmp_list <- list()
-for (city in CITIES) {
-  intermediary_data <- data[data["city"] == city, ]
-  bisection_breaks <- quantile(intermediary_data[[column_name]], probs = c(0, 0.80, 1), na.rm = TRUE)
-  tmp_list[[city]] <- bisection_breaks
-}
+rm(list=ls())
 
 # assign quartiles, (absolute) terciles, bisection (high/low @ 50%)
 add_quantile_column <- function(data, CITIES, column_name) {
@@ -19,7 +15,8 @@ add_quantile_column <- function(data, CITIES, column_name) {
       # determine breaks for each category
       quartile_breaks <- quantile(intermediary_data[[column_name]], probs = c(0, 0.25, 0.5, 0.75, 1), na.rm = TRUE)
       tercile_breaks <- c(-Inf, 10, 30, Inf)
-      bisection_breaks <- quantile(intermediary_data[[column_name]], probs = c(0, 0.90, 1), na.rm = TRUE)
+      bisection_breaks <- quantile(intermediary_data[[column_name]], probs = c(0, 0.75, 1), na.rm = TRUE)
+      # bisection_breaks <- c(-Inf, 80, Inf)
   
       # Add categorized columns to data
       intermediary_data <- intermediary_data %>%
@@ -37,7 +34,45 @@ add_quantile_column <- function(data, CITIES, column_name) {
   return(data)
 }
 
-# process data --------------------------------------------------------------------------------
+calculate_exposure_percent_cutoffs <- function(data, column, CITIES, quantiles) {
+  quantiles <- c(0.75, 0.80, 0.85, 0.90)
+  CITIES <- c("Fukuoka", "Kumamoto", "Nagasaki", "Oita", "Saga", "Kagoshima", "Miyazaki", "Kitakyushu")
+  data <- data[, c("date", "city", "SuHi")]
+  results <- list()
+  for (city in CITIES) {
+    city_data <- data %>% filter(city == !!city)
+    city_quantiles <- quantile(city_data$SuHi, probs = quantiles, na.rm=TRUE)
+    results[[city]] <- round(city_quantiles, 2)
+  }
+  results <- do.call(cbind, results)
+  rownames(results) <- paste0(quantiles * 100, "%")
+  return(results)
+}
+
+calculate_exposure_absolute_cutoffs <- function(data, column, CITIES, quantiles) {
+  quantiles <- c(20, 40, 60, 80)
+  CITIES <- c("Fukuoka", "Kumamoto", "Nagasaki", "Oita", "Saga", "Kagoshima", "Miyazaki", "Kitakyushu")
+  data <- data[, c("date", "city", "SuHi")]
+  data$SuHi <- as.numeric(as.character(data$SuHi))
+  data <- data %>% filter(!is.na(SuHi))
+  results <- list()
+  for (city in CITIES) {
+    city_data <- data %>% filter(city == !!city)
+    
+    city_counts <- sapply(values, function(x) {
+      below <- sum(city_data$SuHi < x, na.rm = TRUE)
+      above <- sum(city_data$SuHi >= x, na.rm = TRUE)
+      c(below, above)
+    })
+    
+    results[[city]] <- city_counts
+  }
+  result_df <- do.call(cbind, results)
+  rownames(result_df) <- values
+  return(results)
+}
+
+# main ----------------------------------------------------------------------------------------
 
 # initialize project state
 root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
@@ -218,8 +253,8 @@ columns_to_rename <- list(
 
 # Applying the renaming
 data <- lagdata %>%
-  select(all_of(columns_to_keep)) %>%
-  rename(!!!columns_to_rename)
+  dplyr::select(all_of(columns_to_keep)) %>%
+  dplyr::rename(!!!columns_to_rename)
 
 # create quantiles ----------------------------------------------------------------------------
 

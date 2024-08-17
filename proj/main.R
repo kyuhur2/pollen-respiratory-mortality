@@ -1,3 +1,4 @@
+
 library(lubridate)
 library(Epi)
 library(tsModel)
@@ -5,31 +6,28 @@ library(splines)
 library(mgcv)
 library(dplyr)
 
-# TODO: add supplementary table that shows the cutoffs for
-# - quartiles
-# - terciles
-# - bisection
-# for each city. 
-
 # set up --------------------------------------------------------------------------------------
 
 # initialize project state
+rm(list=ls())
 root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
 source(paste0(root_dir, "/proj/functions.R"))  # import functions
 
+# import data
 tmp <- read.csv(file=paste0(root_dir, "/data/fdata.csv"))
 data <- read.csv(file=paste0(root_dir, "/data/data.csv"))
-data[, "date"] <- as.Date(data[, "date"])  # transform date col to date type
+data[, "date"] <- as.Date(data[, "date"])
 
 # run glm model for non-interactive models ----------------------------------------------------
 
 # set up data structures
-noninteractive <- list()  # temp list to append data.frames
 i <- 0
 CITIES <- c("Fukuoka", "Kumamoto", "Nagasaki", "Oita", "Saga", "Kagoshima", "Miyazaki", "Kitakyushu")
 OUTCOMES <- c("all", "circ", "resp", "all65", "circ65", "resp65")
 EXPOSURES <- c("spm", "no2", "so2", "pol")
 LAGS <- c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5")
+
+noninteractive <- list()  # temp list to append data.frames
 
 # three for loops, creating a matrix of (outcomes * exposures * city)
 for (outcome in OUTCOMES) {
@@ -65,14 +63,13 @@ noninteractive <- do.call(rbind, noninteractive)  # collapsing list into data.fr
 
 # run glm model for interactive models --------------------------------------------------------
 
-# temp list to append data.frames
-interactive_quartile <- list()
+EXPOSURES <- c("spm", "no2", "so2")  # rewrite exposures, drop "pol" as it's interactive
+interactive_quartile <- list()  # temp lists to append data.frames
 interactive_tercile <- list()
 interactive_bisection <- list()
 
 # three for loops, creating a matrix of (outcomes * exposures * city)
 i <- 0
-EXPOSURES <- c("spm", "no2", "so2")  # rewrite exposures, drop "pol" as it's interactive
 for (outcome in OUTCOMES) {
   for (exposure in EXPOSURES) {
     intermediary <- list()
@@ -114,7 +111,7 @@ for (outcome in OUTCOMES) {
 interactive_quartile <- do.call(rbind, interactive_quartile)  # collapsing list into data.frame
 
 i <- 0
-for (outcome in OUTCOMES) {
+for (outcome  in OUTCOMES) {
   for (exposure in EXPOSURES) {
     intermediary <- list()
     for (city in CITIES) {
@@ -202,6 +199,11 @@ write.csv(interactive_quartile, paste0(root_dir, "/data/interactive_quartile.csv
 write.csv(interactive_tercile, paste0(root_dir, "/data/interactive_tercile.csv"), row.names=FALSE)
 write.csv(interactive_bisection, paste0(root_dir, "/data/interactive_bisection.csv"), row.names=FALSE)
 
+# tmp
+interactive_bisection_abs80 <- interactive_bisection
+write.csv(interactive_bisection_abs80, paste0(root_dir, "/data/interactive_bisection_abs80.csv"), row.names=FALSE)
+interactive_bisection_abs80 <- read.csv(file=paste0(root_dir, "/data/interactive_bisection_abs80.csv"))
+
 rm(list = ls())  # reset
 root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
 source(paste0(root_dir, "/proj/functions.R")) 
@@ -228,92 +230,83 @@ LAGS <- c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5")
 
 # metafor: combine interactive results --------------------------------------------------------
 
-i <- 0
-metafor_noninteractive_data <- list()
+# noninteractive
+metafor_noninteractive <- list()
 for (outcome in OUTCOMES) {
   for (exposure in  c("spm", "no2", "so2", "pol")) {
-    i = i + 1
-    results <- metafor_noninteractive(
+    results <- run_metafor_noninteractive(
       data=noninteractive,
       exposure=exposure,
       outcome=outcome,
       lags=LAGS
     )
-    metafor_noninteractive_data <- append(metafor_noninteractive_data, list(results))
+    metafor_noninteractive <- append(metafor_noninteractive, list(results))
   }
 }
-metafor_noninteractive_data <- do.call(rbind, metafor_noninteractive_data) 
+metafor_noninteractive <- do.call(rbind, metafor_noninteractive) 
 
-# for bisection
-i <- 0
-metafor_bisection_data <- list()
+# interactive
+metafor_bisection <- list()
+metafor_tercile <- list()
+metafor_quartile <- list()
 for (outcome in OUTCOMES) {
   for (exposure in EXPOSURES) {
-    i = i + 1
-    results <- metafor_bisection(
-      data=interactive_bisection,
+    # for bisection
+    results <- run_metafor_bisection(
+      data=interactive_bisection_abs80,
       exposure=exposure,
       outcome=outcome,
       quantile_type="bisection",
       lags=LAGS
     )
-    metafor_bisection_data <- append(metafor_bisection_data, list(results))
+    metafor_bisection <- append(metafor_bisection, list(results))
+    
+    # # for tercile
+    # results <- run_metafor_tercile(
+    #   data=interactive_tercile,
+    #   exposure=exposure,
+    #   outcome=outcome,
+    #   quantile_type="tercile",
+    #   lags=LAGS
+    # )
+    # metafor_tercile <- append(metafor_tercile, list(results))
+    # 
+    # # for quartile
+    # results <- run_metafor_quartile(
+    #   data=interactive_quartile,
+    #   exposure=exposure,
+    #   outcome=outcome,
+    #   quantile_type="quartile",
+    #   lags=LAGS
+    # )
+    # metafor_quartile <- append(metafor_quartile, list(results))
   }
 }
-metafor_bisection_data <- do.call(rbind, metafor_bisection_data) 
-
-# for tercile
-i <- 0
-metafor_tercile_data <- list()
-for (outcome in OUTCOMES) {
-  for (exposure in EXPOSURES) {
-    i = i + 1
-    results <- metafor_tercile(
-      data=interactive_tercile,
-      exposure=exposure,
-      outcome=outcome,
-      quantile_type="tercile",
-      lags=LAGS
-    )
-    metafor_tercile_data <- append(metafor_tercile_data, list(results))
-  }
-}
-metafor_tercile_data <- do.call(rbind, metafor_tercile_data) 
-
-# for quartile
-i <- 0
-metafor_quartile_data <- list()
-for (outcome in OUTCOMES) {
-  for (exposure in EXPOSURES) {
-    i = i + 1
-    results <- metafor_quartile(
-      data=interactive_quartile,
-      exposure=exposure,
-      outcome=outcome,
-      quantile_type="quartile",
-      lags=LAGS
-    )
-    metafor_quartile_data <- append(metafor_quartile_data, list(results))
-  }
-}
-metafor_quartile_data <- do.call(rbind, metafor_quartile_data) 
+metafor_bisection <- do.call(rbind, metafor_bisection) 
+metafor_tercile <- do.call(rbind, metafor_tercile) 
+metafor_quartile <- do.call(rbind, metafor_quartile) 
 
 # TODO: check only one city--e.g. Fukuoka--and see if I get the same estimates.
 
 # checkpoint 2 --------------------------------------------------------------------------------
 
-write.csv(metafor_noninteractive_data, paste0(root_dir, "/data/metafor_noninteractive_data.csv"), row.names=FALSE)
-write.csv(metafor_bisection_data, paste0(root_dir, "/data/metafor_bisection_data.csv"), row.names=FALSE)
-write.csv(metafor_tercile_data, paste0(root_dir, "/data/metafor_tercile_data.csv"), row.names=FALSE)
-write.csv(metafor_quartile_data, paste0(root_dir, "/data/metafor_quartile_data.csv"), row.names=FALSE)
+write.csv(metafor_noninteractive, paste0(root_dir, "/data/metafor_noninteractive.csv"), row.names=FALSE)
+write.csv(metafor_quartile, paste0(root_dir, "/data/metafor_quartile.csv"), row.names=FALSE)
+write.csv(metafor_tercile, paste0(root_dir, "/data/metafor_tercile.csv"), row.names=FALSE)
+write.csv(metafor_bisection, paste0(root_dir, "/data/metafor_bisection.csv"), row.names=FALSE)
+
+# tmp
+metafor_bisection_abs80 <- metafor_bisection
+write.csv(metafor_bisection_abs80, paste0(root_dir, "/data/metafor_bisection_abs80.csv"), row.names=FALSE)
+metafor_bisection_abs80 <- read.csv(file=paste0(root_dir, "/data/metafor_bisection_abs80.csv"))
 
 rm(list=ls())  # reset
 root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
 source(paste0(root_dir, "/proj/functions.R")) 
-metafor_noninteractive_data <- read.csv(file=paste0(root_dir, "/data/metafor_noninteractive_data.csv"))
-metafor_bisection_data <- read.csv(file=paste0(root_dir, "/data/metafor_bisection_data.csv"))
-metafor_tercile_data <- read.csv(file=paste0(root_dir, "/data/metafor_tercile_data.csv"))
-metafor_quartile_data <- read.csv(file=paste0(root_dir, "/data/metafor_quartile_data.csv"))
+metafor_noninteractive <- read.csv(file=paste0(root_dir, "/data/metafor_noninteractive.csv"))
+metafor_quartile <- read.csv(file=paste0(root_dir, "/data/metafor_quartile.csv"))
+metafor_tercile <- read.csv(file=paste0(root_dir, "/data/metafor_tercile.csv"))
+metafor_bisection <- read.csv(file=paste0(root_dir, "/data/metafor_bisection.csv"))
 
 # non-interactive plot ------------------------------------------------------------------------
 
@@ -324,13 +317,14 @@ exposure <- "so2"
 outcome <- "circ"
 lags <- c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5")
 dot_color <- "red"
-data <- metafor_noninteractive_data[
-  metafor_noninteractive_data["exposure"] == exposure &
-    metafor_noninteractive_data["outcome"] == outcome &
-    metafor_noninteractive_data$lag %in% lags,
+data <- metafor_noninteractive[
+  metafor_noninteractive["exposure"] == exposure &
+    metafor_noninteractive["outcome"] == outcome &
+    metafor_noninteractive$lag %in% lags,
 ]
 
-ggplot(data, aes(x = lag, y = rr)) +
+ggplot(data,
+  aes(x = lag, y = rr)) +
   geom_point(color = dot_color) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), color = "black", width = 0.2) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "gray") +
@@ -339,27 +333,29 @@ ggplot(data, aes(x = lag, y = rr)) +
 
 # interactive
 exposure <- "spm"
-outcome <- "circ"
+outcome <- "resp"
 lags <- c(0, 1, 2)
 dot_color <- "blue"
-#data <- metafor_quartile_data[
-#  metafor_quartile_data["exposure"] == exposure &
-#    metafor_quartile_data["outcome"] == outcome &
-#    metafor_quartile_data$lag %in% lags,
-#]
-data <- metafor_bisection_data[
-  metafor_bisection_data["exposure"] == exposure &
-    metafor_bisection_data["outcome"] == outcome &
-    metafor_bisection_data$lag %in% lags,
+data_to_use <- metafor_bisection_abs80  # replace with dataset being used
+data <- data_to_use[
+  data_to_use["exposure"] == exposure &
+    data_to_use["outcome"] == outcome &
+    data_to_use$lag %in% lags,
 ]
 
-ggplot(data, aes(x = interaction(quantile, lag), y = rr)) +
+ggplot(data,
+  aes(x = interaction(quantile, lag), y = rr)) +
   geom_point(color = dot_color) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), color = "black", width = 0.2) +
   geom_hline(yintercept = 1.0, linetype = "dashed", color = "gray") +
   geom_vline(xintercept = 2.5, linetype = "dashed", color = "gray") +
   geom_vline(xintercept = 4.5, linetype = "dashed", color = "gray") +
-  labs(x = "Quantile and Lag", y = "Relative Risk (RR)", title =  paste("Interactive RR across Lag 0-2 for", exposure, outcome)) +
+  labs(x = "Quantile and Lag",
+       y = "Relative Risk (RR)",
+       title =  paste("Interactive RR across Lag 0-2 for",
+       exposure,
+       outcome)
+  ) +
   theme_classic() +
   scale_x_discrete(labels = function(x) paste("Q", gsub("\\..*", "", as.integer(x)), "\nLag", gsub(".*\\.", "", x)))
 
@@ -478,6 +474,8 @@ legend(
 dev.off()
 
 # relative pollen cutoff 75%, 80%, 85%, 90%
+
+
 
 # absolute pollen cutoff 20, 40, 60, 80
 
