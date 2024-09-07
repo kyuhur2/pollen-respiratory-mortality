@@ -13,7 +13,7 @@ Prerequisites are as follows:
 - `/data/lagdata.csv` (format can be provided by author upon request--data itself is private)
 - `R` version `^4.4.1`
 - `R` libraries:
-  - dplyr, ggplot2, ggtext, scales, lubridate, Epi, tsModel, splines, mgcv, metafor, data.table
+  - dplyr, ggplot2, ggtext, scales, lubridate, Epi, tsModel, splines, mgcv, metafor, data.table, cowplot
 
 The generated figures can be found under `/plots`.
 

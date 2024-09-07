@@ -17,7 +17,7 @@ magick figureS3.pdf figureS3.png
 
 ## Figure 1
 
-![figure1.png](figure1.png)
+![figure1.png](/plots/figure1.png)
 
 ## Figure 2
 
