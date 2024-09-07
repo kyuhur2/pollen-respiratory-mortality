@@ -1,4 +1,4 @@
-# Pollen, Respiratory, and Mortality Project
+# Pollen, Particulate Matter, and Respiratory Mortality
 
 ## TL;DR
 
