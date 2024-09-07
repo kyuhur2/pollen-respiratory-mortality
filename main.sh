@@ -1,17 +1,9 @@
 #!/bin/zsh
 
-cleanup_data() {
-    find "$root_dir/data" -type f ! -name "lagdata.csv" -delete
-    echo "All files except lagdata.csv have been deleted from /data."
-}
-
 # set constants
 seasonal_df=4
 temperature_df=3
 root_dir="/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-
-# delete all data except lagdata.csv if an error occurs
-trap 'cleanup_data' ERR
 
 # make directories if they don't exist
 mkdir -p "$root_dir/plots"
@@ -33,6 +25,3 @@ Rscript proj/plots.R
 
 # run sensitivity analysis
 Rscript proj/sensitivity.R
-
-trap - ERR  # remove trap if no error
-

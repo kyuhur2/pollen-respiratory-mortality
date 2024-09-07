@@ -1,11 +1,7 @@
 
 library(ggplot2)
 library(ggtext)
-library(cowplot)
 library(dplyr)
-library(raster)
-library(maps)
-library(mapdata)
 
 # setup -----------------------------------------------------------------------------------------------------------
 
@@ -202,11 +198,11 @@ plot2 <- {
     ncol = 2,
     labels = c(
       "[A] All-cause",
-      "[D] All-cause Aged 65+",
+      "[D] All-cause Ages ≥65",
       "[B] Respiratory",
-      "[E] Respiratory Aged 65+",
+      "[E] Respiratory Ages ≥65",
       "[C] Cardiovascular",
-      "[F] Cardiovascular Aged 65+"
+      "[F] Cardiovascular Ages ≥65"
     ),
     label_x = 0.05,
     hjust = 0
@@ -477,12 +473,12 @@ plotS1 <- {
     nrow = 3,
     ncol = 2,
     labels = c(
-      "[A] All-cause Ages 65 and Above",
-      "[D] All-cause Ages 65 and Above",
-      "[B] Respiratory Ages 65 and Above",
-      "[E] Respiratory Ages 65 and Above",
-      "[C] Cardiovascular Ages 65 and Above",
-      "[F] Cardiovascular Ages 65 and Above"
+      "[A] All-cause Ages ≥65",
+      "[D] All-cause Ages ≥65",
+      "[B] Respiratory Ages ≥65",
+      "[E] Respiratory Ages ≥65",
+      "[C] Cardiovascular Ages ≥65",
+      "[F] Cardiovascular Ages ≥65"
     ),
     label_x = 0.05,
     hjust = 0

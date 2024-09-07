@@ -5,13 +5,8 @@ library(tsModel)
 library(splines)
 library(mgcv)
 library(dplyr)
-library(mixmeta)
 library(metafor)
 library(data.table)
-library(gridExtra)
-library(grid)
-library(ggplot2)
-library(lattice)
 
 # set up ----------------------------------------------------------------------------------------------------------
 
