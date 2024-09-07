@@ -6,21 +6,20 @@ rm(list = ls())
 root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
 source(paste0(root_dir, "/proj/functions.R")) # import functions
 
-fdata <- read.csv(file = paste0(root_dir, "/data/fdata.csv"))
+# import data
 lagdata <- read.csv(file = paste0(root_dir, "/data/lagdata.csv"))
-subdata <- read.csv(file = paste0(root_dir, "/data/subdata.csv"))
 
 # data transformations
-fdata[, "SuHi0"] <- fdata[, "SuHi"]
-fdata[, "date"] <- as.Date(fdata[, "date"])
 lagdata[, "SuHi0"] <- lagdata[, "SuHi"]
 lagdata[, "date"] <- as.Date(lagdata[, "date"])
-subdata[, "SuHi0"] <- subdata[, "SuHi"]
-subdata[, "date"] <- as.Date(subdata[, "date"])
 
-# constant
+# constants
 CITIES <- c(
   "Fukuoka", "Kumamoto", "Nagasaki", "Oita", "Saga", "Kagoshima", "Miyazaki", "Kitakyushu"
+)
+POL_COLUMNS_TO_PROCESS <- c(
+  "pol_0", "pol_1", "pol_2", "pol_3", "pol_4", "pol_5", "pol_6", "pol_7", "pol_ma1", "pol_ma2", "pol_ma3", "pol_ma4",
+  "pol_ma5", "pol_ma6", "pol_ma7"
 )
 
 # rewrite subdata
@@ -188,236 +187,112 @@ data <- lagdata %>%
   dplyr::select(all_of(columns_to_keep)) %>%
   dplyr::rename(!!!columns_to_rename)
 
-# create different quantile data ------------------------------------------
+# create different quantile data ----------------------------------------------------------------------------------
 
 # bool_perc_cutoff = TRUE, bisection_cutoff = 75%
 {
   data_perc75 <- data
 
   # create quantiles
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_0", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_1", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_2", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_3", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_4", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_5", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_6", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_7", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma1", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma2", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma3", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma4", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma5", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma6", TRUE, 0.75)
-  data_perc75 <- add_quantile_column(data_perc75, CITIES, "pol_ma7", TRUE, 0.75)
-  
+  for (col in POL_COLUMNS_TO_PROCESS) {
+    data_perc75 <- add_quantile_column(data_perc75, CITIES, col, TRUE, 0.75)
+  }
+
   # subset feb to apr
   data_perc75 <- data_perc75 %>%
     filter(month %in% c(2, 3, 4))
-  
+
   # export data
   write.csv(data_perc75, file = paste0(root_dir, "/data/data_perc75.csv"), row.names = FALSE)
+  rm(data_perc75)
 }
 
 # bool_perc_cutoff = TRUE, bisection_cutoff = 80%
 {
   data_perc80 <- data
-  
+
   # create quantiles
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_0", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_1", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_2", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_3", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_4", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_5", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_6", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_7", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma1", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma2", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma3", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma4", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma5", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma6", TRUE, 0.80)
-  data_perc80 <- add_quantile_column(data_perc80, CITIES, "pol_ma7", TRUE, 0.80)
-  
+  for (col in POL_COLUMNS_TO_PROCESS) {
+    data_perc80 <- add_quantile_column(data_perc80, CITIES, col, TRUE, 0.80)
+  }
+
   # subset feb to apr
   data_perc80 <- data_perc80 %>%
     filter(month %in% c(2, 3, 4))
-  
+
   # export data
   write.csv(data_perc80, file = paste0(root_dir, "/data/data_perc80.csv"), row.names = FALSE)
+  rm(data_perc80)
 }
 
 # bool_perc_cutoff = TRUE, bisection_cutoff = 85%
 {
   data_perc85 <- data
-  
+
   # create quantiles
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_0", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_1", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_2", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_3", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_4", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_5", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_6", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_7", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma1", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma2", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma3", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma4", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma5", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma6", TRUE, 0.85)
-  data_perc85 <- add_quantile_column(data_perc85, CITIES, "pol_ma7", TRUE, 0.85)
-  
+  for (col in POL_COLUMNS_TO_PROCESS) {
+    data_perc85 <- add_quantile_column(data_perc85, CITIES, col, TRUE, 0.85)
+  }
+
   # subset feb to apr
   data_perc85 <- data_perc85 %>%
     filter(month %in% c(2, 3, 4))
-  
+
   # export data
   write.csv(data_perc85, file = paste0(root_dir, "/data/data_perc85.csv"), row.names = FALSE)
+  rm(data_perc85)
 }
 
-# bool_perc_cutoff = TRUE, bisection_cutoff = 90%
+# bool_perc_cutoff = FALSE, bisection_cutoff = 25 pollen count
 {
-  data_perc90 <- data
-  
+  data_abs25 <- data
+
   # create quantiles
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_0", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_1", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_2", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_3", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_4", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_5", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_6", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_7", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma1", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma2", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma3", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma4", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma5", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma6", TRUE, 0.90)
-  data_perc90 <- add_quantile_column(data_perc90, CITIES, "pol_ma7", TRUE, 0.90)
-  
+  for (col in POL_COLUMNS_TO_PROCESS) {
+    data_abs25 <- add_quantile_column(data_abs25, CITIES, col, FALSE, 25)
+  }
+
   # subset feb to apr
-  data_perc90 <- data_perc90 %>%
+  data_abs25 <- data_abs25 %>%
     filter(month %in% c(2, 3, 4))
-  
+
   # export data
-  write.csv(data_perc90, file = paste0(root_dir, "/data/data_perc90.csv"), row.names = FALSE)
+  write.csv(data_abs25, file = paste0(root_dir, "/data/data_abs25.csv"), row.names = FALSE)
+  rm(data_abs25)
 }
 
-# bool_perc_cutoff = FALSE, bisection_cutoff = 20
+# bool_perc_cutoff = FALSE, bisection_cutoff = 50 pollen count
 {
-  data_abs20 <- data
-  
+  data_abs50 <- data
+
   # create quantiles
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_0", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_1", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_2", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_3", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_4", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_5", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_6", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_7", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma1", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma2", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma3", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma4", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma5", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma6", FALSE, 20)
-  data_abs20 <- add_quantile_column(data_abs20, CITIES, "pol_ma7", FALSE, 20)
-  
+  for (col in POL_COLUMNS_TO_PROCESS) {
+    data_abs50 <- add_quantile_column(data_abs50, CITIES, col, FALSE, 50)
+  }
+
   # subset feb to apr
-  data_abs20 <- data_abs20 %>%
+  data_abs50 <- data_abs50 %>%
     filter(month %in% c(2, 3, 4))
-  
+
   # export data
-  write.csv(data_abs20, file = paste0(root_dir, "/data/data_abs20.csv"), row.names = FALSE)
+  write.csv(data_abs50, file = paste0(root_dir, "/data/data_abs50.csv"), row.names = FALSE)
+  rm(data_abs50)
 }
 
-# bool_perc_cutoff = FALSE, bisection_cutoff = 40
+# bool_perc_cutoff = FALSE, bisection_cutoff = 75 pollen count
 {
-  data_abs40 <- data
-  
-  # create quantiles
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_0", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_1", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_2", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_3", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_4", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_5", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_6", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_7", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma1", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma2", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma3", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma4", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma5", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma6", FALSE, 40)
-  data_abs40 <- add_quantile_column(data_abs40, CITIES, "pol_ma7", FALSE, 40)
-  
-  # subset feb to apr
-  data_abs40 <- data_abs40 %>%
-    filter(month %in% c(2, 3, 4))
-  
-  # export data
-  write.csv(data_abs40, file = paste0(root_dir, "/data/data_abs40.csv"), row.names = FALSE)
-}
+  data_abs75 <- data
 
-# bool_perc_cutoff = FALSE, bisection_cutoff = 60
-{
-  data_abs60 <- data
-  
   # create quantiles
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_0", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_1", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_2", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_3", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_4", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_5", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_6", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_7", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma1", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma2", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma3", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma4", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma5", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma6", FALSE, 60)
-  data_abs60 <- add_quantile_column(data_abs60, CITIES, "pol_ma7", FALSE, 60)
-  
-  # subset feb to apr
-  data_abs60 <- data_abs60 %>%
-    filter(month %in% c(2, 3, 4))
-  
-  # export data
-  write.csv(data_abs60, file = paste0(root_dir, "/data/data_abs60.csv"), row.names = FALSE)
-}
+  for (col in POL_COLUMNS_TO_PROCESS) {
+    data_abs75 <- add_quantile_column(data_abs75, CITIES, col, FALSE, 75)
+  }
 
-# bool_perc_cutoff = FALSE, bisection_cutoff = 80
-{
-  data_abs80 <- data
-  
-  # create quantiles
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_0", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_1", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_2", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_3", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_4", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_5", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_6", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_7", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma1", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma2", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma3", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma4", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma5", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma6", FALSE, 80)
-  data_abs80 <- add_quantile_column(data_abs80, CITIES, "pol_ma7", FALSE, 80)
-  
   # subset feb to apr
-  data_abs80 <- data_abs80 %>%
+  data_abs75 <- data_abs75 %>%
     filter(month %in% c(2, 3, 4))
-  
+
   # export data
-  write.csv(data_abs80, file = paste0(root_dir, "/data/data_abs80.csv"), row.names = FALSE)
+  write.csv(data_abs75, file = paste0(root_dir, "/data/data_abs75.csv"), row.names = FALSE)
+  rm(data_abs75)
 }

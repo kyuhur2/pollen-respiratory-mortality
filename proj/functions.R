@@ -1,11 +1,23 @@
+
 library(dplyr)
 library(ggplot2)
 library(scales)
+
+# constants -------------------------------------------------------------------------------------------------------
+
+options(error = traceback)
 
 # testing  ----------------------------------------------------------------
 
 TEST <- FALSE
 if (TEST == TRUE) {
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
+  data <- read.csv(file = paste0(
+    root_dir,
+    paste0("/data/data_", bisection_variation, ".csv")
+  ))
+  data[, "date"] <- as.Date(data[, "date"])
+  
   outcome <- "resp65"
   exposure <- "spm"
   city <- "Miyazaki"
@@ -20,9 +32,10 @@ if (TEST == TRUE) {
   year <- "year"
   temp_mean <- "tave07"
   date <- "date"
-  season_df <- 4
   relative_humidity_mean <- "rhave"
-  k <- 0
+  seasonal_df <- 4
+  temperature_df <- 3
+  k <- "ma5"
 }
 if (TEST == TRUE) {
   root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
@@ -33,6 +46,50 @@ if (TEST == TRUE) {
   lags <- c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5")
   q <- 1
   k <- 1
+}
+
+
+# misc functions --------------------------------------------------------------------------------------------------
+
+parse_args <- function(args) {
+  parsed <- list()
+  
+  for (arg in args) {
+    # split argument into name and value at '='
+    split_arg <- strsplit(arg, "=")[[1]]
+    if (length(split_arg) == 2) {
+      name <- split_arg[1]
+      value <- split_arg[2]
+      
+      # assign values to a list with appropriate type conversion
+      parsed[[name]] <- value
+    }
+  }
+  
+  return(parsed)
+}
+
+progress_bar <- function(total) {
+  progress::progress_bar$new(
+    format = "\033[38;5;214m[:bar] :percent :current/:total :elapsed\033[0m",
+    total = total,
+    width = 100,
+    clear = FALSE
+  )
+}
+
+# logging functions -----------------------------------------------------------------------------------------------
+
+debug <- function(message) {
+  cat("\033[32m [DEBUG] ", message, "\033[39m\n", sep = "")
+}
+
+warn <- function(message) {
+  cat("\033[33m [WARNING] ", message, "\033[39m\n", sep = "")
+}
+
+error <- function(message) {
+  cat("\033[31m [ERROR] ", message, "\033[39m\n", sep = "")
 }
 
 # data processing functions -----------------------------------------------
@@ -53,12 +110,6 @@ add_quantile_column <- function(data,
                                   na.rm = TRUE)
       tercile_breaks <- c(-Inf, 10, 30, Inf)
       
-      print(paste0(
-        "Percent Cutoff: ",
-        bool_perc_cutoff,
-        ", Cutting at ",
-        bisection_cutoff
-      ))
       if (bool_perc_cutoff) {
         bisection_breaks <- quantile(
           intermediary_data[[column_name]],
@@ -162,6 +213,22 @@ calculate_exposure_absolute_cutoffs <- function(data, column, CITIES, quantiles)
   return(results)
 }
 
+# sensitivity functions -------------------------------------------------------------------------------------------
+
+calculate_qaic <- function(model) {
+  residual_deviance <- summary(model)$deviance
+  chat <- summary(model)$dispersion
+  p <- length(coef(model))
+  qaic <- residual_deviance + 2 * p * chat
+  return(qaic)
+}
+
+calculate_model_p_value <- function(model1, model2) {
+  anova_result <- anova(model1, model2, test="Chisq")
+  p_value <- anova_result[2, "Pr(>Chi)"]
+  return(round(p_value, 4))
+}
+
 # modeling functions ------------------------------------------------------
 
 run_noninteractive_glm_model <- function(city,
@@ -176,122 +243,68 @@ run_noninteractive_glm_model <- function(city,
                                          year,
                                          temp_mean,
                                          date,
-                                         season_df,
-                                         relative_humidity_mean) {
-  # validate input param types
-  if (!is.character(city))
-    stop("Input 'city' not 'character' type.")
-  if (!is.data.frame(data))
-    stop("Input 'data' not 'data.frame' type.")
-  if (!is.character(outcome))
-    stop("Input 'outcome' not 'character type.")
-  if (!is.character(exposure))
-    stop("Input 'exposure' not 'character' type.")
-  if (!is.vector(lags))
-    stop("Input 'lags' not 'vector' type.")
-  if (!is.character(asian_dust_days))
-    stop("Input 'asian_dust_days' not 'character' type.")
-  if (!is.character(holiday))
-    stop("Input 'holiday' not 'character' type.")
-  if (!is.character(day_of_week))
-    stop("Input 'day_of_week' not 'character' type.")
-  if (!is.character(day_of_year))
-    stop("Input 'day_of_year' not 'character' type.")
-  if (!is.character(year))
-    stop("Input 'year' not 'character' type.")
-  if (!is.character(temp_mean))
-    stop("Input 'temp_mean' not 'character' type.")
-  if (!is.character(date))
-    stop("Input 'date' not 'character' type.")
-  if (!is.numeric(season_df))
-    stop("Input 'season_df' not 'numeric' type.")
-  if (!is.character(relative_humidity_mean)) {
-    stop("Input 'relative_humidity_mean' not 'character' type.")
-  }
-  
-  # init collector frame
-  model_result_collector <- list()
-  
-  # run glm model for all exposure x lags pairs; collect data into model_result_collector
-  for (k in lags) {
-    # rename as adjusted exposure easier processing (even if not adjusted)
-    lagged_exposure <- data[, paste0(exposure, "_", k)]
-    
-    # run model
-    model_result <- tryCatch({
-      glm(
-        data[, outcome] ~
-          lagged_exposure +
-          factor(data[, asian_dust_days]) +
-          factor(data[, holiday]) +
-          data[, relative_humidity_mean] +
-          data[, day_of_week] +
-          ns(data[, day_of_year], df = season_df):factor(data[, year]) +
-          ns(data[, temp_mean], df = 3) +
-          ns(data[, date], df = 1),
-        family = quasipoisson
-      )
-    }, error = function(e) {
-      NULL
-    })
-    
-    # collect equation and variables
-    if (is.null(model_result)) {
-      next
-    } else {
-      model_metadata <- list(
-        c(
-          model = model_result["call"],
-          outcome = outcome,
-          exposure = exposure,
-          k = k,
-          asian_dust_days = asian_dust_days,
-          holiday = holiday,
-          relative_humidity_mean = relative_humidity_mean,
-          day_of_week = day_of_week,
-          day_of_year = day_of_year,
-          year = year,
-          temp_mean = temp_mean,
-          date = date
+                                         relative_humidity_mean,
+                                         seasonal_df,
+                                         temperature_df) {
+  tryCatch({
+    # run glm model for all exposure x lags pairs; collect data into model_result_collector
+    model_result_collector <- list()
+    for (k in lags) {
+      # rename as adjusted exposure easier processing (even if not adjusted)
+      lagged_exposure <- data[, paste0(exposure, "_", k)]
+      
+      # run model
+      if (city == "Miyazaki" & exposure == "spm" & outcome == "resp65" & k == "ma3") {
+        model_result <- NULL
+      } else {
+        model_result <- glm(
+          data[, outcome] ~
+            lagged_exposure +
+            factor(data[, asian_dust_days]) +
+            factor(data[, holiday]) +
+            data[, relative_humidity_mean] +
+            data[, day_of_week] +
+            ns(data[, day_of_year], df = seasonal_df):factor(data[, year]) +
+            ns(data[, temp_mean], df = temperature_df) +
+            ns(data[, date], df = 1),
+          family = quasipoisson
         )
-      )
+      }
       
-      model_metadata <- paste(sapply(names(model_metadata[[1]]), function(name) {
-        paste(name, model_metadata[[1]][[name]], sep = "=")
-      }), collapse = "; ")
-      
-      model_result_collector[[length(model_result_collector) + 1]] <- c(
-        ci.exp(model_result, subset = "lagged_exposure"),
-        summary(model_result)$coefficients[, "Estimate"][["lagged_exposure"]],
-        summary(model_result)$coefficients[, "Std. Error"][["lagged_exposure"]],
-        model_metadata
-      )
+      # collect equation and variables
+      if (is.null(model_result)) {
+        idx <- length(model_result_collector) + 1
+        model_result_collector[[idx]] <- model_result_collector[[1]]  # assumes that [[1]] exists
+        model_result_collector[[idx]][] <- NA
+      } else {
+        model_result_collector[[length(model_result_collector) + 1]] <- c(
+          ci.exp(model_result, subset = "lagged_exposure"),
+          summary(model_result)$coefficients[, "Estimate"][["lagged_exposure"]],
+          summary(model_result)$coefficients[, "Std. Error"][["lagged_exposure"]],
+          summary(model_result)$coefficients[, "Pr(>|t|)"][["lagged_exposure"]]
+        )
+      }
     }
-  }
-  
-  # convert to data.frame
-  model_result_collector <- do.call(rbind,
-                                    lapply(model_result_collector, function(x)
-                                      data.frame(t(x), stringsAsFactors = FALSE)))
-  colnames(model_result_collector) <- c("rr", "cil", "ciu", "B", "se", "model_metadata")
-  
-  # add column "city", "exposure", "outcome" to the results
-  model_result_collector["city"] <- city
-  model_result_collector["exposure"] <- exposure
-  if (city == "Miyazaki" &
-      exposure == "spm" & outcome == "resp65") {
-    model_result_collector[, "lag"] <- c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma4", "ma5")
-  } else {
+    
+    # convert to data.frame
+    model_result_collector <- do.call(rbind,
+                                      lapply(model_result_collector, function(x)
+                                        data.frame(t(x), stringsAsFactors = FALSE)))
+    colnames(model_result_collector) <- c("rr", "cil", "ciu", "B", "se", "p_value")
+    
+    # add column "city", "exposure", "outcome" to the results
+    model_result_collector["city"] <- city
+    model_result_collector["exposure"] <- exposure
     model_result_collector[, "lag"] <- paste0(lags)
-  }
-  model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
-  model_result_collector["outcome"] <- outcome
-  
-  # validate output
-  if (!is.data.frame(model_result_collector)) {
-    stop("Output 'model_result_collector' not 'data.frame type.")
-  }
-  
+    model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
+    model_result_collector["outcome"] <- outcome 
+
+  # end of tryCatch block
+  }, error = function(e) {
+    error(paste("\nerror at: ", city, outcome, exposure, k, sep=" "))
+    error(paste0("error output: ", e))
+  })
+
   return(model_result_collector)
 }
 
@@ -309,162 +322,85 @@ run_interactive_glm_model <- function(city,
                                       year,
                                       temp_mean,
                                       date,
-                                      season_df,
-                                      relative_humidity_mean) {
-  # validate input param types
-  if (!is.character(city))
-    stop("Input 'city' not 'character' type.")
-  if (!is.data.frame(data))
-    stop("Input 'data' not 'data.frame' type.")
-  if (!is.character(outcome))
-    stop("Input 'outcome' not 'character type.")
-  if (!is.character(exposure))
-    stop("Input 'exposure' not 'character' type.")
-  if (!is.character(interactive))
-    stop("Input 'interactive' not 'character' type.")
-  if (!is.character(quantile_type) ||
-      !(quantile_type %in% c("quartile", "tercile", "bisection"))) {
-    stop(
-      "Invalid input: 'quantile_type' must be one of 'quartile', 'tercile', or 'bisection'."
-    )
-  }
-  if (!is.vector(lags))
-    stop("Input 'lags' not 'vector' type.")
-  if (!is.character(asian_dust_days))
-    stop("Input 'asian_dust_days' not 'character' type.")
-  if (!is.character(holiday))
-    stop("Input 'holiday' not 'character' type.")
-  if (!is.character(day_of_week))
-    stop("Input 'day_of_week' not 'character' type.")
-  if (!is.character(day_of_year))
-    stop("Input 'day_of_year' not 'character' type.")
-  if (!is.character(year))
-    stop("Input 'year' not 'character' type.")
-  if (!is.character(temp_mean))
-    stop("Input 'temp_mean' not 'character' type.")
-  if (!is.character(date))
-    stop("Input 'date' not 'character' type.")
-  if (!is.numeric(season_df))
-    stop("Input 'season_df' not 'numeric' type.")
-  if (!is.character(relative_humidity_mean)) {
-    stop("Input 'relative_humidity_mean' not 'character' type.")
-  }
-  
-  # init collector frame
-  model_result_collector <- list()
-  
-  # run glm model for all exposure x lags pairs; collect data into model_result_collector
-  for (k in lags) {
-    lagged_exposure <- data[, paste0(exposure, "_", k)]
-    # TODO: create this dynamically based on the LAGGED version of SuHi (e.g. SPMout5 -> category of SuHiout5)
-    lagged_interactive <- as.factor(data[, paste0(interactive, "_", k, "_", quantile_type)])
-    
-    # run model
-    model_result <- tryCatch({
-      glm(
-        data[, outcome] ~
-          lagged_interactive +
-          lagged_exposure:lagged_interactive +
-          factor(data[, asian_dust_days]) +
-          factor(data[, holiday]) +
-          data[, relative_humidity_mean] +
-          data[, day_of_week] +
-          ns(data[, day_of_year], df = season_df):factor(data[, year]) +
-          ns(data[, temp_mean], df = 3) +
-          ns(data[, date], df = 1),
-        family = quasipoisson
-      )
-    }, error = function(e) {
-      NULL
-    })
-    
-    # collect equation and variables
-    if (is.null(model_result)) {
-      # handle the error by filling in NA values
-      model_metadata <- list(
-        c(
-          model = NA,
-          outcome = outcome,
-          exposure = exposure,
-          k = k,
-          asian_dust_days = asian_dust_days,
-          holiday = holiday,
-          relative_humidity_mean = relative_humidity_mean,
-          day_of_week = day_of_week,
-          day_of_year = day_of_year,
-          year = year,
-          temp_mean = temp_mean,
-          date = date
+                                      relative_humidity_mean,
+                                      seasonal_df,
+                                      temperature_df) {
+  tryCatch({
+    # run glm model for all exposure x lags pairs; collect data into model_result_collector
+    model_result_collector <- list()
+    for (k in lags) {
+      lagged_exposure <- data[, paste0(exposure, "_", k)]
+      lagged_interactive <- as.factor(data[, paste0(interactive, "_", k, "_", quantile_type)])
+      
+      # run model
+      if (city == "Miyazaki" & exposure == "spm" & outcome == "resp65" & k == "ma3") {
+        model_result <- NULL
+      } else {
+        model_result <- glm(
+          data[, outcome] ~
+            lagged_interactive +
+            lagged_exposure:lagged_interactive +
+            factor(data[, asian_dust_days]) +
+            factor(data[, holiday]) +
+            data[, relative_humidity_mean] +
+            data[, day_of_week] +
+            ns(data[, day_of_year], df = seasonal_df):factor(data[, year]) +
+            ns(data[, temp_mean], df = temperature_df) +
+            ns(data[, date], df = 1),
+          family = quasipoisson
         )
-      )
+      }
       
-      model_metadata <- paste(sapply(names(model_metadata[[1]]), function(name) {
-        paste(name, model_metadata[[1]][[name]], sep = "=")
-      }), collapse = "; ")
-      
-      model_result_collector[[length(model_result_collector) + 1]] <- c(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, model_metadata)
-    } else {
-      model_metadata <- list(
-        c(
-          model = model_result["call"],
-          outcome = outcome,
-          exposure = exposure,
-          k = k,
-          interactive = interactive,
-          quantile_type = quantile_type,
-          asian_dust_days = asian_dust_days,
-          holiday = holiday,
-          relative_humidity_mean = relative_humidity_mean,
-          day_of_week = day_of_week,
-          day_of_year = day_of_year,
-          year = year,
-          temp_mean = temp_mean,
-          date = date
-        )
-      )
-      
-      model_metadata <- paste(sapply(names(model_metadata[[1]]), function(name) {
-        paste(name, model_metadata[[1]][[name]], sep = "=")
-      }), collapse = "; ")
-      
-      # collect results based on adjusted_lagged_exposure
-      ci_vector <- as.vector(t(ci.exp(model_result, subset = "lagged_exposure"))) # results
-      
-      # extract B, se
-      coeff_matrix <- summary(model_result)$coefficients
-      B_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Estimate"]
-      se_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Std. Error"]
-      
-      model_result_collector[[length(model_result_collector) + 1]] <- c(ci_vector, B_vector, se_vector, model_metadata)
+      # collect metrics
+      if (is.null(model_result)) {
+        # handle the error by filling in NA values
+        idx <- length(model_result_collector) + 1
+        model_result_collector[[idx]] <- model_result_collector[[1]]  # assumes that [[1]] exists
+        model_result_collector[[idx]][] <- NA
+      } else {
+        # collect results based on adjusted_lagged_exposure
+        ci_vector <- as.vector(t(ci.exp(model_result, subset = "lagged_exposure")))  # results
+        
+        # extract B, se, p_value
+        coeff_matrix <- summary(model_result)$coefficients
+        B_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Estimate"]
+        se_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Std. Error"]
+        p_value_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Pr(>|t|)"]
+        
+        # attach to model_result_collector
+        model_result_collector[[length(model_result_collector) + 1]] <- c(ci_vector, B_vector, se_vector, p_value_vector)
+      }
     }
-  }
-  
-  # convert to data.frame
-  model_result_collector <- do.call(rbind,
-                                    lapply(model_result_collector, function(x)
-                                      data.frame(t(x), stringsAsFactors = FALSE)))
-  
-  # column names: rows, separator, columns
-  row_names <- rownames(ci.exp(model_result, subset = "lagged_exposure"))
-  row_names <- gsub("lagged_exposure", "exposure", row_names)
-  row_names <- gsub("lagged_interactive", "interactive", row_names)
-  colnames(model_result_collector) <- c(paste0(c("rr", "cil", "ciu"), "_", rep(row_names, each = 3)),
-                                        paste0(c("B"), "_", rep(row_names, each = 1)),
-                                        paste0(c("se"), "_", rep(row_names, each = 1)),
-                                        "metadata")
-  
-  # add column "city", "exposure", "outcome" to the results
-  model_result_collector["city"] <- city
-  model_result_collector["exposure"] <- exposure
-  model_result_collector[, "lag"] <- paste0(lags)
-  model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
-  model_result_collector["outcome"] <- outcome
-  model_result_collector["quantile_type"] <- quantile_type
-  
-  # validate output
-  if (!is.data.frame(model_result_collector)) {
-    stop("Output 'model_result_collector' not 'data.frame type.")
-  }
+    
+    x <- model_result_collector
+    
+    # convert to data.frame
+    model_result_collector <- do.call(rbind,
+                                      lapply(model_result_collector, function(x)
+                                        data.frame(t(x), stringsAsFactors = FALSE)))
+    
+    # column names: rows, separator, columns
+    row_names <- rownames(ci.exp(model_result, subset = "lagged_exposure"))
+    row_names <- gsub("lagged_exposure", "exposure", row_names)
+    row_names <- gsub("lagged_interactive", "interactive", row_names)
+    colnames(model_result_collector) <- c(paste0(c("rr", "cil", "ciu"), "_", rep(row_names, each = 3)),
+                                          paste0(c("B"), "_", rep(row_names, each = 1)),
+                                          paste0(c("se"), "_", rep(row_names, each = 1)),
+                                          paste0(c("p_value"), "_", rep(row_names, each = 1)))
+
+    # add column "city", "exposure", "outcome" to the results
+    model_result_collector["city"] <- city
+    model_result_collector["exposure"] <- exposure
+    model_result_collector[, "lag"] <- paste0(lags)
+    model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
+    model_result_collector["outcome"] <- outcome
+    model_result_collector["quantile_type"] <- quantile_type
+
+  # end of tryCatch block
+  }, error = function(e) {
+    error(paste("error at: ", city, outcome, exposure, k, sep=" "))
+    error(paste0("error output: ", e))
+  })
   
   return(model_result_collector)
 }
@@ -484,164 +420,89 @@ run_gaseous_conf_glm_model <- function(city,
                                        year,
                                        temp_mean,
                                        date,
-                                       season_df,
-                                       relative_humidity_mean) {
-  # validate input param types
-  if (!is.character(city))
-    stop("Input 'city' not 'character' type.")
-  if (!is.data.frame(data))
-    stop("Input 'data' not 'data.frame' type.")
-  if (!is.character(outcome))
-    stop("Input 'outcome' not 'character type.")
-  if (!is.character(exposure))
-    stop("Input 'exposure' not 'character' type.")
-  if (!is.character(interactive))
-    stop("Input 'interactive' not 'character' type.")
-  if (!is.character(quantile_type) ||
-      !(quantile_type %in% c("quartile", "tercile", "bisection"))) {
-    stop(
-      "Invalid input: 'quantile_type' must be one of 'quartile', 'tercile', or 'bisection'."
-    )
-  }
-  if (!is.vector(lags))
-    stop("Input 'lags' not 'vector' type.")
-  if (!is.character(asian_dust_days))
-    stop("Input 'asian_dust_days' not 'character' type.")
-  if (!is.character(holiday))
-    stop("Input 'holiday' not 'character' type.")
-  if (!is.character(day_of_week))
-    stop("Input 'day_of_week' not 'character' type.")
-  if (!is.character(day_of_year))
-    stop("Input 'day_of_year' not 'character' type.")
-  if (!is.character(year))
-    stop("Input 'year' not 'character' type.")
-  if (!is.character(temp_mean))
-    stop("Input 'temp_mean' not 'character' type.")
-  if (!is.character(date))
-    stop("Input 'date' not 'character' type.")
-  if (!is.numeric(season_df))
-    stop("Input 'season_df' not 'numeric' type.")
-  if (!is.character(relative_humidity_mean)) {
-    stop("Input 'relative_humidity_mean' not 'character' type.")
-  }
-  
-  # init collector frame
-  model_result_collector <- list()
-  
-  # run glm model for all exposure x lags pairs; collect data into model_result_collector
-  for (k in lags) {
-    lagged_exposure <- data[, paste0(exposure, "_", k)]
-    # TODO: create this dynamically based on the LAGGED version of SuHi (e.g. SPMout5 -> category of SuHiout5)
-    lagged_interactive <- as.factor(data[, paste0(interactive, "_", k, "_", quantile_type)])
-    lagged_confounding <- data[, paste0(confounding, "_", k)]
-    
-    # run model
-    model_result <- tryCatch({
-      glm(
-        data[, outcome] ~
-          lagged_interactive +
-          lagged_exposure:lagged_interactive +
-          lagged_confounding +
-          factor(data[, asian_dust_days]) +
-          factor(data[, holiday]) +
-          data[, relative_humidity_mean] +
-          data[, day_of_week] +
-          ns(data[, day_of_year], df = season_df):factor(data[, year]) +
-          ns(data[, temp_mean], df = 3) +
-          ns(data[, date], df = 1),
-        family = quasipoisson
-      )
-    }, error = function(e) {
-      NULL
-    })
-    
-    # collect equation and variables
-    if (is.null(model_result)) {
-      # handle the error by filling in NA values
-      model_metadata <- list(
-        c(
-          model = NA,
-          outcome = outcome,
-          exposure = exposure,
-          k = k,
-          asian_dust_days = asian_dust_days,
-          holiday = holiday,
-          relative_humidity_mean = relative_humidity_mean,
-          day_of_week = day_of_week,
-          day_of_year = day_of_year,
-          year = year,
-          temp_mean = temp_mean,
-          date = date
+                                       relative_humidity_mean,
+                                       seasonal_df,
+                                       temperature_df) {
+  tryCatch({
+    # run glm model for all exposure x lags pairs; collect data into model_result_collector
+    model_result_collector <- list()
+    for (k in lags) {
+      lagged_exposure <- data[, paste0(exposure, "_", k)]
+      lagged_interactive <- as.factor(data[, paste0(interactive, "_", k, "_", quantile_type)])
+      lagged_confounding <- data[, paste0(confounding, "_", k)]
+      
+      # run model
+      if (
+        (city == "Miyazaki" & exposure == "spm" & outcome == "resp65" & k == "ma3") || 
+        (city == "Miyazaki" & exposure == "spm" & outcome == "resp" & k == "ma3")
+      ) {
+        model_result <- NULL
+      } else {
+        model_result <- glm(
+          data[, outcome] ~
+            lagged_interactive +
+            lagged_exposure:lagged_interactive +
+            lagged_confounding +
+            factor(data[, asian_dust_days]) +
+            factor(data[, holiday]) +
+            data[, relative_humidity_mean] +
+            data[, day_of_week] +
+            ns(data[, day_of_year], df = seasonal_df):factor(data[, year]) +
+            ns(data[, temp_mean], df = temperature_df) +
+            ns(data[, date], df = 1),
+          family = quasipoisson
         )
-      )
+      }
       
-      model_metadata <- paste(sapply(names(model_metadata[[1]]), function(name) {
-        paste(name, model_metadata[[1]][[name]], sep = "=")
-      }), collapse = "; ")
-      
-      model_result_collector[[length(model_result_collector) + 1]] <- c(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, model_metadata)
-    } else {
-      model_metadata <- list(
-        c(
-          model = model_result["call"],
-          outcome = outcome,
-          exposure = exposure,
-          k = k,
-          interactive = interactive,
-          quantile_type = quantile_type,
-          asian_dust_days = asian_dust_days,
-          holiday = holiday,
-          relative_humidity_mean = relative_humidity_mean,
-          day_of_week = day_of_week,
-          day_of_year = day_of_year,
-          year = year,
-          temp_mean = temp_mean,
-          date = date
-        )
-      )
-      
-      model_metadata <- paste(sapply(names(model_metadata[[1]]), function(name) {
-        paste(name, model_metadata[[1]][[name]], sep = "=")
-      }), collapse = "; ")
-      
-      # collect results based on adjusted_lagged_exposure
-      ci_vector <- as.vector(t(ci.exp(model_result, subset = "lagged_exposure"))) # results
-      
-      # extract B, se
-      coeff_matrix <- summary(model_result)$coefficients
-      B_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Estimate"]
-      se_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Std. Error"]
-      
-      model_result_collector[[length(model_result_collector) + 1]] <- c(ci_vector, B_vector, se_vector, model_metadata)
+      # collect metrics
+      if (is.null(model_result)) {
+        # handle the error by filling in NA values
+        idx <- length(model_result_collector) + 1
+        model_result_collector[[idx]] <- model_result_collector[[1]]
+        model_result_collector[[idx]][] <- NA
+      } else {
+        # collect results based on adjusted_lagged_exposure
+        ci_vector <- as.vector(t(ci.exp(model_result, subset = "lagged_exposure"))) # results
+        
+        # extract B, se, p_value
+        coeff_matrix <- summary(model_result)$coefficients
+        B_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Estimate"]
+        se_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Std. Error"]
+        p_value_vector <- coeff_matrix[grepl("lagged_exposure", rownames(coeff_matrix)), ][, "Pr(>|t|)"]
+        
+        # attach to model_result_collector
+        model_result_collector[[length(model_result_collector) + 1]] <- c(ci_vector, B_vector, se_vector, p_value_vector)
+      }
     }
-  }
+    
+    # convert to data.frame
+    model_result_collector <- do.call(rbind,
+                                      lapply(model_result_collector, function(x)
+                                        data.frame(t(x), stringsAsFactors = FALSE)))
+    
+    # column names: rows, separator, columns
+    row_names <- rownames(ci.exp(model_result, subset = "lagged_exposure"))
+    row_names <- gsub("lagged_exposure", "exposure", row_names)
+    row_names <- gsub("lagged_interactive", "interactive", row_names)
+    colnames(model_result_collector) <- c(paste0(c("rr", "cil", "ciu"), "_", rep(row_names, each = 3)),
+                                          paste0(c("B"), "_", rep(row_names, each = 1)),
+                                          paste0(c("se"), "_", rep(row_names, each = 1)),
+                                          paste0(c("p_value"), "_", rep(row_names, each = 1)))
   
-  # convert to data.frame
-  model_result_collector <- do.call(rbind,
-                                    lapply(model_result_collector, function(x)
-                                      data.frame(t(x), stringsAsFactors = FALSE)))
-  
-  # column names: rows, separator, columns
-  row_names <- rownames(ci.exp(model_result, subset = "lagged_exposure"))
-  row_names <- gsub("lagged_exposure", "exposure", row_names)
-  row_names <- gsub("lagged_interactive", "interactive", row_names)
-  colnames(model_result_collector) <- c(paste0(c("rr", "cil", "ciu"), "_", rep(row_names, each = 3)),
-                                        paste0(c("B"), "_", rep(row_names, each = 1)),
-                                        paste0(c("se"), "_", rep(row_names, each = 1)),
-                                        "metadata")
-  
-  # add column "city", "exposure", "outcome" to the results
-  model_result_collector["city"] <- city
-  model_result_collector["exposure"] <- exposure
-  model_result_collector[, "lag"] <- paste0(lags)
-  model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
-  model_result_collector["outcome"] <- outcome
-  model_result_collector["quantile_type"] <- quantile_type
-  
-  # validate output
-  if (!is.data.frame(model_result_collector)) {
-    stop("Output 'model_result_collector' not 'data.frame type.")
-  }
+    # add column "city", "exposure", "outcome" to the results
+    model_result_collector["city"] <- city
+    model_result_collector["outcome"] <- outcome
+    model_result_collector["exposure"] <- exposure
+    model_result_collector["confounding"] <- confounding
+    model_result_collector[, "lag"] <- paste0(lags)
+    model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
+    model_result_collector["quantile_type"] <- quantile_type
+
+  # end of tryCatch block
+  }, error = function(e) {
+    error(paste("error at: ", city, outcome, exposure, k, sep=" "))
+    error(paste0("error output: ", e))
+  })
   
   return(model_result_collector)
 }
@@ -921,14 +782,91 @@ run_metafor_bisection <- function(data,
   return(df_results)
 }
 
-# plotting functions ------------------------------------------------------
+run_metafor_bisection_conf <- function(data,
+                                  exposure,
+                                  outcome,
+                                  confounding,
+                                  quantile_type,
+                                  lags) {
+  # start by subsetting data
+  data <- data[data["exposure"] == exposure &
+                 data["outcome"] == outcome &
+                 data["confounding"] == confounding &
+                 data["quantile_type"] == quantile_type, ]
+  iqrm <- mean(data[, "iqr"]) # calculate iqr for each column related to "exposure" in data
+  
+  # initialize matrix for results
+  quantile_names <- c("interactive1.exposure", "interactive2.exposure")
+  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  results <- matrix(
+    numeric(0),
+    nrow = (length(lags)) * length(quantile_names),
+    ncol = length(matrix_columns),
+    dimnames = list(NULL, matrix_columns)
+  )
+  
+  # loop over quantiles * lags
+  for (q in 1:length(quantile_names)) {
+    for (k in seq(lags)) {
+      est_vector <- as.numeric(data[data["lag"] == lags[k], paste0("B_", quantile_names[q])])
+      se_vector <- as.numeric(data[data["lag"] == lags[k], paste0("se_", quantile_names[q])])
+      row_number <- k + (length(lags)) * (q - 1) # adjust row number for each quantile
+      
+      if (length(est_vector) > 0 &&
+          !any(is.na(est_vector)) && !any(is.na(se_vector))) {
+        tryCatch({
+          meta_analysis <- metafor::rma(yi = est_vector,
+                                        sei = se_vector,
+                                        method = "REML")
+          
+          # store results from meta-analysis in matrix
+          results[row_number, 1:4] <- c(meta_analysis$b,
+                                        meta_analysis$se,
+                                        meta_analysis$I2,
+                                        meta_analysis$QEp)
+          results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
+          results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
+          results[row_number, "ciu"] <- exp((meta_analysis$b + 1.96 * meta_analysis$se) * iqrm)
+          results[row_number, "quantile"] <- q
+        }, error = function(e) {
+          cat("Error processing lag",
+              k,
+              "quantile",
+              q,
+              ":",
+              e$message,
+              "\n")
+          results[row_number, ] <- rep(NA, length(matrix_columns))
+        })
+      } else {
+        cat("Data missing or NA for lag", k, "quantile", q - 1, "\n")
+        results[row_number, ] <- rep(NA, length(matrix_columns))
+      }
+    }
+  }
+  
+  # convert matrix to data frame
+  df_results <- as.data.frame(results)
+  df_results$exposure <- exposure
+  df_results$outcome <- outcome
+  df_results$quantile_type <- quantile_type
+  df_results$lag <- paste0(rep(lags, length(quantile_names)))
+  df_results$iqrm <- iqrm
+  
+  return(df_results)
+}
+
+# plotting functions ----------------------------------------------------------------------------------------------
 
 create_noninteractive_plot <- function(exposure,
                                        outcome,
                                        lags,
                                        data,
+                                       y_lower_bound,
+                                       y_upper_bound,
                                        point_color,
-                                       point_shape) {
+                                       point_shape,
+                                       debug) {
   # subset data
   data <- data[data["exposure"] == exposure &
                  data["outcome"] == outcome & data$lag %in% lags, ]
@@ -945,13 +883,7 @@ create_noninteractive_plot <- function(exposure,
   )
   data$lag <- factor(data$lag,
                      levels = c("0", "1", "2", "3", "4", "5", "0-1", "0-2", "0-3", "0-4", "0-5"))
-  
-  # determine bounds
-  min_ <- min(data$cil, na.rm = TRUE)
-  max_ <- max(data$ciu, na.rm = TRUE)
-  lower_bound <- min_ * 0.9975
-  upper_bound <- max_ * 1.0025
-  
+
   # plot
   x <- ggplot(data, aes(x = lag, y = rr)) +
     geom_errorbar(aes(ymin = cil, ymax = ciu),
@@ -970,9 +902,9 @@ create_noninteractive_plot <- function(exposure,
       strip.text = element_text(face = "bold"),
       panel.spacing = unit(0.5, "lines")
     ) +
-    scale_y_continuous(limits = c(lower_bound, upper_bound),
+    scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
                        labels = label_number(accuracy = 0.01)) +
-    facet_grid( ~ facet_group, scales = "free_x", space = "free")
+    facet_grid(~ facet_group, scales = "free_x", space = "free")
   
   return(x)
 }
@@ -982,9 +914,15 @@ create_interactive_plot <- function(exposure,
                                     lags,
                                     data,
                                     cutoffs_vec,
+                                    y_lower_bound,
+                                    y_upper_bound,
                                     point_shapes,
                                     point_colors,
-                                    legend_label) {
+                                    legend_label,
+                                    debug) {
+  # params
+  levels <- c("Low L0", "High L0", "Low L1", "High L1", "Low L2", "High L2")
+  
   # construct dataframe with the 4 cutoffs
   data_frames <- list()
   for (i in seq(length(data))) {
@@ -997,26 +935,22 @@ create_interactive_plot <- function(exposure,
   data <- do.call(rbind, data_frames) # collapse into one dataframe
   
   # create the levels for x_axis without spaces
-  x_axis_levels <- paste0(rep(cutoffs_vec, times = 6),
+  x_axis_levels <- paste0(rep(cutoffs_vec, times = length(levels)),
                           "Q",
-                          rep(rep(1:2, each = 4), times = 3),
+                          rep(rep(1:2, each = 3), times = 3),
                           "L",
-                          rep(0:2, each = 8))
-  
-  # mutate combination of cutoffs * quantile * lag
+                          rep(0:2, each = 6))
+  if (debug) { debug(paste("x_axis_levels:", x_axis_levels)) }
+
+  # mutate combination of cutoffs * quantile * lags
+  if (debug) { debug(paste("cutoffs * quantile * lags:", data$cutoffs, "Q", data$quantile, "L", data$lag)) }
   data <- data %>%
     arrange(lag, quantile, cutoffs) %>%
     mutate(x_axis = factor(paste0(cutoffs, "Q", quantile, "L", lag), levels = x_axis_levels))
   
-  # create grouping variable that groups every 4 elements together
-  levels <- c("Low L0", "High L0", "Low L1", "High L1", "Low L2", "High L2")
-  data$group <- factor(rep(levels, each = 4), levels = levels)
-  
-  # calculate the min and max rr values
-  min_ <- min(data$cil, na.rm = TRUE)
-  max_ <- max(data$ciu, na.rm = TRUE)
-  lower_bound <- min_ * 0.995
-  upper_bound <- max_ * 1.005
+  # create grouping variable that groups every 3 elements together
+  if (debug) { debug(paste("levels:", levels)) }
+  data$group <- factor(rep(levels, each = length(cutoffs_vec)), levels = levels)
   
   # labellers for facet()
   group_labeller <- function(variable, value) {
@@ -1064,11 +998,12 @@ create_interactive_plot <- function(exposure,
       legend.title = element_text(size = 10, face = "bold"),
       strip.text = element_markdown()
     ) +
-    scale_y_continuous(limits = c(lower_bound, upper_bound)) +
-    facet_wrap( ~ group,
-                scales = "free_x",
-                nrow = 1,
-                labeller = group_labeller) +
+    scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
+                       labels = label_number(accuracy = 0.01)) +
+    facet_wrap(~ group,
+               scales = "free_x",
+               nrow = 1,
+               labeller = group_labeller) +
     scale_shape_manual(values = point_shapes) +
     scale_color_manual(values = point_colors)
   

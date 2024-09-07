@@ -1,10 +1,4 @@
 
-# setup -----------------------------------------------------------------------------------------------------------
-
-rm(list = ls())  # reset
-root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-source(paste0(root_dir, "/proj/functions.R"))
-
 library(ggplot2)
 library(ggtext)
 library(cowplot)
@@ -12,6 +6,12 @@ library(dplyr)
 library(raster)
 library(maps)
 library(mapdata)
+
+# setup -----------------------------------------------------------------------------------------------------------
+
+rm(list = ls())  # reset
+root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
+source(paste0(root_dir, "/proj/functions.R"))
 
 # main ------------------------------------------------------------------------------------------------------------
 
@@ -29,39 +29,103 @@ data_1 <- {
     )),
     read.csv(file = paste0(
       root_dir, "/data/metafor_bisection_perc85.csv"
-    )),
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_perc90.csv"
     ))
   )
 }
 data_2 <- {
   list(
     read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs20.csv"
+      root_dir, "/data/metafor_bisection_abs25.csv"
     )),
     read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs40.csv"
+      root_dir, "/data/metafor_bisection_abs50.csv"
     )),
     read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs60.csv"
-    )),
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs80.csv"
+      root_dir, "/data/metafor_bisection_abs75.csv"
     ))
   )
 }
 
+# no2 conf
+data_3 <- {
+  list(
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_no2_perc75.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_no2_perc80.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_no2_perc85.csv"
+    ))
+  )
+}
+data_4 <- {
+  list(
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_no2_abs25.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_no2_abs50.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_no2_abs75.csv"
+    ))
+  )
+}
+
+# so2 conf
+data_5 <- {
+  list(
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_so2_perc75.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_so2_perc80.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_so2_perc85.csv"
+    ))
+  )
+}
+data_6 <- {
+  list(
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_so2_abs25.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_so2_abs50.csv"
+    )),
+    read.csv(file = paste0(
+      root_dir, "/data/metafor_bisection_so2_abs75.csv"
+    ))
+  )
+}
+
+# figure 1 --------------------------------------------------------------------------------------------------------
+
+# moved to misc.R because code no longer works (one of the libraries is pulling data from a location that doesn't exist)
+
 # figure 2 --------------------------------------------------------------------------------------------------------
 
+# params
+tmp <- data_0[data_0$exposure %in% c("spm") &
+              data_0$outcome %in% c("all", "circ", "resp", "all65", "circ65", "resp65") &
+                data_0$lag %in% c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"), ]
+y_lower_bound <- min(tmp$cil, na.rm = TRUE)
+y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 point_color = "red"
 point_shape = 18
+
+# plots
 a <- {
   create_noninteractive_plot(
     exposure = "spm",
     outcome = "all",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     point_color = point_color,
     point_shape = point_shape
   )
@@ -72,6 +136,8 @@ b <- {
     outcome = "all65",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     point_color = point_color,
     point_shape = point_shape
   )
@@ -82,6 +148,8 @@ c <- {
     outcome = "resp",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     point_color = point_color,
     point_shape = point_shape
   )
@@ -92,6 +160,8 @@ d <- {
     outcome = "resp65",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     point_color = point_color,
     point_shape = point_shape
   )
@@ -102,6 +172,8 @@ e <- {
     outcome = "circ",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     point_color = point_color,
     point_shape = point_shape
   )
@@ -112,6 +184,8 @@ f <- {
     outcome = "circ65",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     point_color = point_color,
     point_shape = point_shape
   )
@@ -140,9 +214,9 @@ plot2 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figure2.tif"),
+    filename = paste0(root_dir, "/plots/figure2.pdf"),
     plot = plot2,
-    device = "tiff",
+    device = "pdf",
     width = 10,
     height = 8,
     units = "in",
@@ -150,19 +224,33 @@ plot2 <- {
   )
 }
 
-
 # figure 3 --------------------------------------------------------------------------------------------------------
 
+# params
+tmp <- do.call(rbind, c(data_1, data_2))
+tmp <- tmp[tmp$exposure %in% c("spm") &
+             tmp$outcome %in% c("all", "circ", "resp") &
+             tmp$lag %in% c("0", "1", "2"), ]
+y_lower_bound <- min(tmp$cil, na.rm = TRUE)
+y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
+cutoffs_vec_perc <- c(75, 80, 85)
+cutoffs_vec_abs <- c(25, 50, 75)
+debug <- FALSE
+
+# plots
 a <- {
   create_interactive_plot(
     exposure = "spm",
     outcome = "all",
     lags = c(0, 1, 2),
     data = data_1,
-    cutoffs_vec = c(75, 80, 85, 90),
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCutoff \n(%)",
     point_shapes = c(15, 16, 17, 18),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 b <- {
@@ -171,10 +259,13 @@ b <- {
     outcome = "all",
     lags = c(0, 1, 2),
     data = data_2,
-    cutoffs_vec = c(20, 40, 60, 80),
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCount",
     point_shapes = c(0, 1, 2, 9),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 c <- {
@@ -183,10 +274,13 @@ c <- {
     outcome = "resp",
     lags = c(0, 1, 2),
     data = data_1,
-    cutoffs_vec = c(75, 80, 85, 90),
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCutoff (%)",
     point_shapes = c(15, 16, 17, 18),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 d <- {
@@ -195,10 +289,13 @@ d <- {
     outcome = "resp",
     lags = c(0, 1, 2),
     data = data_2,
-    cutoffs_vec = c(20, 40, 60, 80),
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCount",
     point_shapes = c(0, 1, 2, 9),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 e <- {
@@ -207,10 +304,13 @@ e <- {
     outcome = "circ",
     lags = c(0, 1, 2),
     data = data_1,
-    cutoffs_vec = c(75, 80, 85, 90),
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCutoff (%)",
     point_shapes = c(15, 16, 17, 18),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 f <- {
@@ -219,10 +319,13 @@ f <- {
     outcome = "circ",
     lags = c(0, 1, 2),
     data = data_2,
-    cutoffs_vec = c(20, 40, 60, 80),
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCount",
     point_shapes = c(0, 1, 2, 9),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 plot3 <- {
@@ -249,9 +352,9 @@ plot3 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figure3.tif"),
+    filename = paste0(root_dir, "/plots/figure3.pdf"),
     plot = plot3,
-    device = "tiff",
+    device = "pdf",
     width = 10,
     height = 8,
     units = "in",
@@ -259,18 +362,33 @@ plot3 <- {
   )
 }
 
-# figure 4 --------------------------------------------------------------------------------------------------------
+# figure S1 -------------------------------------------------------------------------------------------------------
 
+# params
+tmp <- do.call(rbind, c(data_1, data_2))
+tmp <- tmp[tmp$exposure %in% c("spm") &
+             tmp$outcome %in% c("all65", "circ65", "resp65") &
+             tmp$lag %in% c("0", "1", "2"), ]
+y_lower_bound <- min(tmp$cil, na.rm = TRUE)
+y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
+cutoffs_vec_perc <- c(75, 80, 85)
+cutoffs_vec_abs <- c(25, 50, 75)
+debug <- FALSE
+
+# plots
 a <- {
   create_interactive_plot(
     exposure = "spm",
     outcome = "all65",
     lags = c(0, 1, 2),
     data = data_1,
-    cutoffs_vec = c(75, 80, 85, 90),
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCutoff \n(%)",
     point_shapes = c(15, 16, 17, 18),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 b <- {
@@ -279,10 +397,13 @@ b <- {
     outcome = "all65",
     lags = c(0, 1, 2),
     data = data_2,
-    cutoffs_vec = c(20, 40, 60, 80),
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCount",
     point_shapes = c(0, 1, 2, 9),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 c <- {
@@ -291,10 +412,13 @@ c <- {
     outcome = "resp65",
     lags = c(0, 1, 2),
     data = data_1,
-    cutoffs_vec = c(75, 80, 85, 90),
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCutoff (%)",
     point_shapes = c(15, 16, 17, 18),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 d <- {
@@ -303,10 +427,13 @@ d <- {
     outcome = "resp65",
     lags = c(0, 1, 2),
     data = data_2,
-    cutoffs_vec = c(20, 40, 60, 80),
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCount",
     point_shapes = c(0, 1, 2, 9),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 e <- {
@@ -315,10 +442,13 @@ e <- {
     outcome = "circ65",
     lags = c(0, 1, 2),
     data = data_1,
-    cutoffs_vec = c(75, 80, 85, 90),
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCutoff (%)",
     point_shapes = c(15, 16, 17, 18),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
 f <- {
@@ -327,13 +457,16 @@ f <- {
     outcome = "circ65",
     lags = c(0, 1, 2),
     data = data_2,
-    cutoffs_vec = c(20, 40, 60, 80),
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
     legend_label = "Pollen \nCount",
     point_shapes = c(0, 1, 2, 9),
-    point_colors = c("red", "blue", "green", "purple")
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
-plot4 <- {
+plotS1 <- {
   plot_grid(
     a,
     b,
@@ -344,12 +477,12 @@ plot4 <- {
     nrow = 3,
     ncol = 2,
     labels = c(
-      "[A] All-cause Aged 65+",
-      "[D] All-cause Aged 65+",
-      "[B] Respiratory Aged 65+",
-      "[E] Respiratory Aged 65+",
-      "[C] Cardiovascular Aged 65+",
-      "[F] Cardiovascular Aged 65+"
+      "[A] All-cause Ages 65 and Above",
+      "[D] All-cause Ages 65 and Above",
+      "[B] Respiratory Ages 65 and Above",
+      "[E] Respiratory Ages 65 and Above",
+      "[C] Cardiovascular Ages 65 and Above",
+      "[F] Cardiovascular Ages 65 and Above"
     ),
     label_x = 0.05,
     hjust = 0
@@ -357,9 +490,9 @@ plot4 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figure4.tif"),
-    plot = plot4,
-    device = "tiff",
+    filename = paste0(root_dir, "/plots/figureS1.pdf"),
+    plot = plotS1,
+    device = "pdf",
     width = 10,
     height = 8,
     units = "in",
@@ -367,147 +500,277 @@ plot4 <- {
   )
 }
 
-# figure 1 --------------------------------------------------------------------------------------------------------
+# figure S2 -------------------------------------------------------------------------------------------------------
 
-root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-tiff(
-  paste0(root_dir, "/plots/study_map.tif"),
-  width = 3200,
-  height = 1800,
-  res = 300
-)
-par(mfrow = c(1, 2), mar = c(4, 5, 0.1, 0.1))
-japan_geodata <- getData("GADM", country = "JPN", level = 1)
+tmp <- do.call(rbind, c(data_3, data_4))
+tmp <- tmp[tmp$exposure %in% c("spm") &
+             tmp$outcome %in% c("all", "circ", "resp") &
+             tmp$lag %in% c("0", "1", "2"), ]
+y_lower_bound <- min(tmp$cil, na.rm = TRUE)
+y_upper_bound <- max(tmp$ciu, na.rm = TRUE) * 1.005
+cutoffs_vec_perc <- c(75, 80, 85)
+cutoffs_vec_abs <- c(25, 50, 75)
+debug <- FALSE
 
-xdegrees = seq(129, 132, 1)
-ydegrees = seq(31, 34, 1)
-xdegrees_ = sapply(xdegrees, function(x)
-  bquote(.(x) * degree ~ E))
-ydegrees_ = sapply(ydegrees, function(x)
-  bquote(.(x) * degree ~ N))
-
-# city plot
-cexcity <- 1.5
-pchcity <- c(seq(7, 10, 1), seq(21, 24, 1))
-colcity <- rep(c(1, 2, 3, 4), 2)
-
-plot(
-  japan_geodata,
-  xlim = c(130, 131),
-  ylim = c(30.75, 34.25),
-  xlab = "Latitude",
-  col = "white",
-  border = "gray50",
-  axes = F,
-  las = 1,
-  bty = "n",
-  box = F
-)
-axis(1, at = xdegrees, labels = do.call(expression, xdegrees_))
-axis(
-  2,
-  at = ydegrees,
-  labels = do.call(expression, ydegrees_),
-  las = 1
-)
-mtext(side = 2, text = "Longitude", line = 3.5)
-
-city_codes <- read.csv(paste(root_dir, "/data/city_geocodes.csv", sep =
-                               ""))
-CITIES <- c(
-  "Fukuoka",
-  "Kumamoto",
-  "Nagasaki",
-  "Oita",
-  "Saga",
-  "Kagoshima",
-  "Miyazaki",
-  "Kitakyushu"
-)
-
-for (i in seq(nrow(city_codes))) {
-  points(
-    city_codes[i, 3],
-    city_codes[i, 2],
-    col = colcity[i],
-    cex = cexcity,
-    pch = pchcity[i]
+# plots
+a <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "all",
+    lags = c(0, 1, 2),
+    data = data_3,
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCutoff \n(%)",
+    point_shapes = c(15, 16, 17, 18),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+b <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "all",
+    lags = c(0, 1, 2),
+    data = data_4,
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCount",
+    point_shapes = c(0, 1, 2, 9),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+c <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "resp65",
+    lags = c(0, 1, 2),
+    data = data_3,
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCutoff (%)",
+    point_shapes = c(15, 16, 17, 18),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+d <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "resp65",
+    lags = c(0, 1, 2),
+    data = data_4,
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCount",
+    point_shapes = c(0, 1, 2, 9),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+e <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "circ65",
+    lags = c(0, 1, 2),
+    data = data_3,
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCutoff (%)",
+    point_shapes = c(15, 16, 17, 18),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+f <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "circ65",
+    lags = c(0, 1, 2),
+    data = data_4,
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCount",
+    point_shapes = c(0, 1, 2, 9),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+plotS2 <- {
+  plot_grid(
+    a,
+    b,
+    c,
+    d,
+    e,
+    f,
+    nrow = 3,
+    ncol = 2,
+    labels = c(
+      "[A] All-cause (NO2 Confounding)",
+      "[D] All-cause (NO2 Confounding)",
+      "[B] Respiratory (NO2 Confounding)",
+      "[E] Respiratory (NO2 Confounding)",
+      "[C] Cardiovascular (NO2 Confounding)",
+      "[F] Cardiovascular (NO2 Confounding)"
+    ),
+    label_x = 0.05,
+    hjust = 0
+  )
+}
+{ 
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS2.pdf"),
+    plot = plotS2,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
   )
 }
 
-legend(
-  "bottomright",
-  CITIES,
-  pch = pchcity,
-  col = colcity,
-  cex = .8,
-  bty = 'n'
-)
+# figure S3 -------------------------------------------------------------------------------------------------------
 
-# Plot 2 - Measurement stations and clinics plot
+# params
+tmp <- do.call(rbind, c(data_5, data_6))
+tmp <- tmp[tmp$exposure %in% c("spm") &
+             tmp$outcome %in% c("all", "circ", "resp") &
+             tmp$lag %in% c("0", "1", "2"), ]
+y_lower_bound <- min(tmp$cil, na.rm = TRUE)
+y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
+cutoffs_vec_perc <- c(75, 80, 85)
+cutoffs_vec_abs <- c(25, 50, 75)
+debug <- FALSE
 
-cexval <- 1.2
-pch1 <- 17
-pch2 <- 7
-col1 <- 4
-col2 <- 2
-
-plot(
-  japan_geodata,
-  xlim = c(130, 131),
-  ylim = c(30.75, 34.25),
-  xlab = "Latitude",
-  col = "white",
-  border = "gray50",
-  axes = F,
-  las = 1,
-  bty = "n",
-  box = F
-)
-axis(1, at = xdegrees, labels = do.call(expression, xdegrees_))
-axis(
-  2,
-  at = ydegrees,
-  labels = do.call(expression, ydegress_),
-  las = 1
-)
-mtext(side = 2, text = "Longitude", line = 3.5)
-
-airpcodes <- read.csv(paste(root_dir, "/data/airp_station_geocodes.csv", sep =
-                              ""))
-airpcodes <- airpcodes[, c(1:2, 5:6)]
-
-for (i in seq(nrow(airpcodes))) {
-  points(airpcodes[i, 4],
-         airpcodes[i, 3],
-         col = col1,
-         cex = cexval,
-         pch = pch1)
-}
-
-pollencodes <- read.csv(paste(root_dir, "/data/clinic_geocodes.csv", sep =
-                                ""))
-pollencodes <- pollencodes[, c(1, 4:5)]
-names(pollencodes) <- c("clinicid", "latitude", 'longitude')
-pollencodes <- pollencodes[pollencodes$clinicid %in% c(2, 3, 4, 8, 11, 17, 23, 25, 27, 28, 36, 38, 44, 49, 54, 59), ]
-
-for (i in seq(nrow(pollencodes))) {
-  points(
-    pollencodes[i, 3],
-    pollencodes[i, 2],
-    col = col2,
-    cex = cexval,
-    pch = pch2
+# plots
+a <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "all",
+    lags = c(0, 1, 2),
+    data = data_5,
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCutoff \n(%)",
+    point_shapes = c(15, 16, 17, 18),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
   )
 }
-
-legend(
-  "bottomright",
-  c("Pollen Clinics", "Air Pollution \nStations"),
-  pch = c(pch1, pch2),
-  col = c(col1, col2),
-  cex = .8,
-  bty = 'n'
-)
-
-dev.off()
+b <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "all",
+    lags = c(0, 1, 2),
+    data = data_6,
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCount",
+    point_shapes = c(0, 1, 2, 9),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+c <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "resp",
+    lags = c(0, 1, 2),
+    data = data_5,
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCutoff (%)",
+    point_shapes = c(15, 16, 17, 18),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+d <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "resp",
+    lags = c(0, 1, 2),
+    data = data_6,
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCount",
+    point_shapes = c(0, 1, 2, 9),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+e <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "circ",
+    lags = c(0, 1, 2),
+    data = data_5,
+    cutoffs_vec = cutoffs_vec_perc,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCutoff (%)",
+    point_shapes = c(15, 16, 17, 18),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+f <- {
+  create_interactive_plot(
+    exposure = "spm",
+    outcome = "circ",
+    lags = c(0, 1, 2),
+    data = data_6,
+    cutoffs_vec = cutoffs_vec_abs,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    legend_label = "Pollen \nCount",
+    point_shapes = c(0, 1, 2, 9),
+    point_colors = c("red", "blue", "green", "purple"),
+    debug = debug
+  )
+}
+plotS3 <- {
+  plot_grid(
+    a,
+    b,
+    c,
+    d,
+    e,
+    f,
+    nrow = 3,
+    ncol = 2,
+    labels = c(
+      "[A] All-cause (SO2 Confounding)",
+      "[D] All-cause (SO2 Confounding)",
+      "[B] Respiratory (SO2 Confounding)",
+      "[E] Respiratory (SO2 Confounding)",
+      "[C] Cardiovascular (SO2 Confounding)",
+      "[F] Cardiovascular (SO2 Confounding)"
+    ),
+    label_x = 0.05,
+    hjust = 0
+  )
+}
+{ 
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS3.pdf"),
+    plot = plotS3,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
