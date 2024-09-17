@@ -48,7 +48,6 @@ if (TEST == TRUE) {
   k <- 1
 }
 
-
 # misc functions --------------------------------------------------------------------------------------------------
 
 parse_args <- function(args) {
@@ -246,67 +245,73 @@ run_noninteractive_glm_model <- function(city,
                                          relative_humidity_mean,
                                          seasonal_df,
                                          temperature_df) {
-  tryCatch({
-    # run glm model for all exposure x lags pairs; collect data into model_result_collector
-    model_result_collector <- list()
-    for (k in lags) {
-      # rename as adjusted exposure easier processing (even if not adjusted)
-      lagged_exposure <- data[, paste0(exposure, "_", k)]
+  
+  model_result_collector <- list()
+  
+  for (k in lags) {
+    # Prepare lagged exposure
+    lagged_exposure <- data[, paste0(exposure, "_", k)]
+    
+    # Try to fit the model and extract results
+    result <- tryCatch({
+      model_result <- glm(
+        data[, outcome] ~
+          lagged_exposure +
+          factor(data[, asian_dust_days]) +
+          factor(data[, holiday]) +
+          data[, relative_humidity_mean] +
+          data[, day_of_week] +
+          ns(data[, day_of_year], df = seasonal_df):factor(data[, year]) +
+          ns(data[, temp_mean], df = temperature_df) +
+          ns(data[, date], df = 1),
+        family = quasipoisson
+      )
       
-      # run model
-      if (city == "Miyazaki" & exposure == "spm" & outcome == "resp65" & k == "ma3") {
-        model_result <- NULL
-      } else {
-        model_result <- glm(
-          data[, outcome] ~
-            lagged_exposure +
-            factor(data[, asian_dust_days]) +
-            factor(data[, holiday]) +
-            data[, relative_humidity_mean] +
-            data[, day_of_week] +
-            ns(data[, day_of_year], df = seasonal_df):factor(data[, year]) +
-            ns(data[, temp_mean], df = temperature_df) +
-            ns(data[, date], df = 1),
-          family = quasipoisson
-        )
-      }
+      # Extract results
+      ci <- ci.exp(model_result, subset = "lagged_exposure")
+      rr <- ci[1]
+      cil <- ci[2]
+      ciu <- ci[3]
+      B <- coef(summary(model_result))["lagged_exposure", "Estimate"]
+      se <- coef(summary(model_result))["lagged_exposure", "Std. Error"]
+      p_value <- coef(summary(model_result))["lagged_exposure", "Pr(>|t|)"]
+      iqr <- IQR(lagged_exposure, na.rm = TRUE)
       
-      # collect equation and variables
-      if (is.null(model_result)) {
-        idx <- length(model_result_collector) + 1
-        model_result_collector[[idx]] <- model_result_collector[[1]]  # assumes that [[1]] exists
-        model_result_collector[[idx]][] <- NA
-      } else {
-        model_result_collector[[length(model_result_collector) + 1]] <- c(
-          ci.exp(model_result, subset = "lagged_exposure"),
-          summary(model_result)$coefficients[, "Estimate"][["lagged_exposure"]],
-          summary(model_result)$coefficients[, "Std. Error"][["lagged_exposure"]],
-          summary(model_result)$coefficients[, "Pr(>|t|)"][["lagged_exposure"]]
-        )
-      }
+      # Collect results
+      data.frame(
+        rr = rr,
+        cil = cil,
+        ciu = ciu,
+        B = B,
+        se = se,
+        p_value = p_value,
+        lag = k,
+        iqr = iqr,
+        city = city,
+        exposure = exposure,
+        outcome = outcome,
+        stringsAsFactors = FALSE
+      )
+    }, error = function(e) {
+      return(NULL)
+    })
+    
+    if (!is.null(result)) {
+      model_result_collector[[length(model_result_collector) + 1]] <- result
     }
-    
-    # convert to data.frame
-    model_result_collector <- do.call(rbind,
-                                      lapply(model_result_collector, function(x)
-                                        data.frame(t(x), stringsAsFactors = FALSE)))
-    colnames(model_result_collector) <- c("rr", "cil", "ciu", "B", "se", "p_value")
-    
-    # add column "city", "exposure", "outcome" to the results
-    model_result_collector["city"] <- city
-    model_result_collector["exposure"] <- exposure
-    model_result_collector[, "lag"] <- paste0(lags)
-    model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
-    model_result_collector["outcome"] <- outcome 
-
-  # end of tryCatch block
-  }, error = function(e) {
-    error(paste("\nerror at: ", city, outcome, exposure, k, sep=" "))
-    error(paste0("error output: ", e))
-  })
-
-  return(model_result_collector)
+    # If result is NULL due to error, skip collecting results
+  }
+  
+  # Combine results into a dataframe if there are any
+  if (length(model_result_collector) > 0) {
+    model_result_df <- do.call(rbind, model_result_collector)
+    return(model_result_df)
+  } else {
+    # Return NULL if no models were successfully fitted
+    return(NULL)
+  }
 }
+
 
 run_interactive_glm_model <- function(city,
                                       data,
@@ -392,7 +397,7 @@ run_interactive_glm_model <- function(city,
     model_result_collector["city"] <- city
     model_result_collector["exposure"] <- exposure
     model_result_collector[, "lag"] <- paste0(lags)
-    model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
+    model_result_collector["iqr"] <- stats::IQR(lagged_exposure, na.rm = TRUE)
     model_result_collector["outcome"] <- outcome
     model_result_collector["quantile_type"] <- quantile_type
 
@@ -495,7 +500,7 @@ run_gaseous_conf_glm_model <- function(city,
     model_result_collector["exposure"] <- exposure
     model_result_collector["confounding"] <- confounding
     model_result_collector[, "lag"] <- paste0(lags)
-    model_result_collector["iqr"] <- IQR(lagged_exposure, na.rm = TRUE)
+    model_result_collector["iqr"] <- stats::IQR(lagged_exposure, na.rm = TRUE)
     model_result_collector["quantile_type"] <- quantile_type
 
   # end of tryCatch block

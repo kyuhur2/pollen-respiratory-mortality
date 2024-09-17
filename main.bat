@@ -2,7 +2,7 @@
 
 REM Set constants
 set seasonal_df=4
-set temperature_df=3
+set temperature_df=4
 set root_dir=C:\Users\kyuhur\Documents\Github\pollen_respiratory_mortality
 
 REM Make directories if they don't exist
@@ -32,10 +32,12 @@ if errorlevel 1 exit /b
 Rscript.exe proj/modeling.R bisection_variation=abs75 seasonal_df=%seasonal_df% temperature_df=%temperature_df%
 if errorlevel 1 exit /b
 
-REM Create plots
-Rscript.exe proj/plots.R
-if errorlevel 1 exit /b
 
 REM Run sensitivity analysis
 Rscript.exe proj/sensitivity.R
 if errorlevel 1 exit /b
+
+REM Create plots
+Rscript.exe proj/plots.R
+if errorlevel 1 exit /b
+

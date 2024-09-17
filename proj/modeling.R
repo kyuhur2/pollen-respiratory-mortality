@@ -61,6 +61,7 @@ library(data.table)
 }
 
 # run non-interactive model; three for loops, creating a matrix of (outcomes * exposures * city)
+# run non-interactive model; three for loops, creating a matrix of (outcomes * exposures * city)
 {
   noninteractive <- list()  # temp list to append data.frames
   for (outcome in OUTCOMES) {
@@ -68,7 +69,7 @@ library(data.table)
       intermediary <- list()
       for (city in CITIES) {
         progress_noninteractive$tick()
-
+        
         results <- run_noninteractive_glm_model(
           city = city,
           data = data[data["city"] == city, ],
@@ -86,8 +87,7 @@ library(data.table)
           seasonal_df = seasonal_df,
           temperature_df = temperature_df
         )
-
-        results[, "city"] <- city
+        
         intermediary <- append(intermediary, list(results))
       }
       noninteractive <- append(noninteractive, list(do.call(rbind, intermediary)))

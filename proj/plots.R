@@ -99,15 +99,19 @@ data_6 <- {
   )
 }
 
+# sensitivity analysis
+data_7 <- read.csv(file = paste0(root_dir, "/data/noninteractive_aggregated.csv"))
+
 # figure 1 --------------------------------------------------------------------------------------------------------
 
-# moved to misc.R because code no longer works (one of the libraries is pulling data from a location that doesn't exist)
+# moved to misc.R because code no longer works (one of the libraries is pulling data from a location that doesn't
+# exist)
 
 # figure 2 --------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- data_0[data_0$exposure %in% c("spm") &
-              data_0$outcome %in% c("all", "circ", "resp", "all65", "circ65", "resp65") &
+              data_0$outcome %in% c("all", "circ", "resp") &
                 data_0$lag %in% c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"), ]
 y_lower_bound <- min(tmp$cil, na.rm = TRUE)
 y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
@@ -130,7 +134,7 @@ a <- {
 b <- {
   create_noninteractive_plot(
     exposure = "spm",
-    outcome = "all65",
+    outcome = "resp",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
     y_lower_bound = y_lower_bound,
@@ -142,30 +146,6 @@ b <- {
 c <- {
   create_noninteractive_plot(
     exposure = "spm",
-    outcome = "resp",
-    lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
-    data = data_0,
-    y_lower_bound = y_lower_bound,
-    y_upper_bound = y_upper_bound,
-    point_color = point_color,
-    point_shape = point_shape
-  )
-}
-d <- {
-  create_noninteractive_plot(
-    exposure = "spm",
-    outcome = "resp65",
-    lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
-    data = data_0,
-    y_lower_bound = y_lower_bound,
-    y_upper_bound = y_upper_bound,
-    point_color = point_color,
-    point_shape = point_shape
-  )
-}
-e <- {
-  create_noninteractive_plot(
-    exposure = "spm",
     outcome = "circ",
     lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
     data = data_0,
@@ -175,38 +155,31 @@ e <- {
     point_shape = point_shape
   )
 }
-f <- {
-  create_noninteractive_plot(
-    exposure = "spm",
-    outcome = "circ65",
-    lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
-    data = data_0,
-    y_lower_bound = y_lower_bound,
-    y_upper_bound = y_upper_bound,
-    point_color = point_color,
-    point_shape = point_shape
-  )
-}
+blank_plot <- ggplot() + theme_void()
+top_row <- plot_grid(
+  blank_plot,
+  a + ggtitle("[A] All-cause") + theme(plot.title = element_text(hjust = 0.5, face = "bold")),
+  blank_plot,
+  labels = NULL,
+  ncol = 3,
+  rel_widths = c(1, 2, 1),
+  align = 'h',
+  axis = 'tb'
+)
+bottom_row <- plot_grid(
+  b + ggtitle("[B] Respiratory") + theme(plot.title = element_text(hjust = 0.5, face = "bold")),
+  c + ggtitle("[C] Cardiovascular") + theme(plot.title = element_text(hjust = 0.5, face = "bold")),
+  labels = NULL,
+  ncol = 2,
+  align = 'hv',
+  axis = 'tblr'
+)
 plot2 <- {
   plot_grid(
-    a,
-    b,
-    c,
-    d,
-    e,
-    f,
-    nrow = 3,
-    ncol = 2,
-    labels = c(
-      "[A] All-cause",
-      "[D] All-cause Ages ≥65",
-      "[B] Respiratory",
-      "[E] Respiratory Ages ≥65",
-      "[C] Cardiovascular",
-      "[F] Cardiovascular Ages ≥65"
-    ),
-    label_x = 0.05,
-    hjust = 0
+    top_row,
+    bottom_row,
+    ncol = 1,
+    rel_heights = c(1, 1)
   )
 }
 {
@@ -362,6 +335,93 @@ plot3 <- {
 # figure S1 -------------------------------------------------------------------------------------------------------
 
 # params
+tmp <- data_0[data_0$exposure %in% c("spm") &
+                data_0$outcome %in% c("all65", "circ65", "resp65") &
+                data_0$lag %in% c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"), ]
+y_lower_bound <- min(tmp$cil, na.rm = TRUE)
+y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
+point_color = "red"
+point_shape = 18
+
+# plots
+a <- {
+  create_noninteractive_plot(
+    exposure = "spm",
+    outcome = "all65",
+    lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
+    data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    point_color = point_color,
+    point_shape = point_shape
+  )
+}
+b <- {
+  create_noninteractive_plot(
+    exposure = "spm",
+    outcome = "resp65",
+    lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
+    data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    point_color = point_color,
+    point_shape = point_shape
+  )
+}
+c <- {
+  create_noninteractive_plot(
+    exposure = "spm",
+    outcome = "circ65",
+    lags = c("0", "1", "2", "3", "4", "5", "ma1", "ma2", "ma3", "ma4", "ma5"),
+    data = data_0,
+    y_lower_bound = y_lower_bound,
+    y_upper_bound = y_upper_bound,
+    point_color = point_color,
+    point_shape = point_shape
+  )
+}
+blank_plot <- ggplot() + theme_void()
+top_row <- plot_grid(
+  blank_plot,
+  a + ggtitle("[A] All-cause Ages >=65") + theme(plot.title = element_text(hjust = 0.5, face = "bold")),
+  blank_plot,
+  labels = NULL,
+  ncol = 3,
+  rel_widths = c(1, 2, 1),
+  align = 'h',
+  axis = 'tb'
+)
+bottom_row <- plot_grid(
+  b + ggtitle("[B] Respiratory Ages >=65") + theme(plot.title = element_text(hjust = 0.5, face = "bold")),
+  c + ggtitle("[C] Cardiovascular Ages >=65") + theme(plot.title = element_text(hjust = 0.5, face = "bold")),
+  labels = NULL,
+  ncol = 2,
+  align = 'hv',
+  axis = 'tblr'
+)
+plotS1 <- {
+  plot_grid(
+    top_row,
+    bottom_row,
+    ncol = 1,
+    rel_heights = c(1, 1)
+  )
+}
+{ 
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS1.pdf"),
+    plot = plotS1,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+# figure S2 -------------------------------------------------------------------------------------------------------
+
+# params
 tmp <- do.call(rbind, c(data_1, data_2))
 tmp <- tmp[tmp$exposure %in% c("spm") &
              tmp$outcome %in% c("all65", "circ65", "resp65") &
@@ -463,7 +523,7 @@ f <- {
     debug = debug
   )
 }
-plotS1 <- {
+plotS2 <- {
   plot_grid(
     a,
     b,
@@ -474,12 +534,12 @@ plotS1 <- {
     nrow = 3,
     ncol = 2,
     labels = c(
-      "[A] All-cause Ages ≥65",
-      "[D] All-cause Ages ≥65",
-      "[B] Respiratory Ages ≥65",
-      "[E] Respiratory Ages ≥65",
-      "[C] Cardiovascular Ages ≥65",
-      "[F] Cardiovascular Ages ≥65"
+      "[A] All-cause Ages >=65",
+      "[D] All-cause Ages >=65",
+      "[B] Respiratory Ages >=65",
+      "[E] Respiratory Ages >=65",
+      "[C] Cardiovascular Ages >=65",
+      "[F] Cardiovascular Ages >=65"
     ),
     label_x = 0.05,
     hjust = 0
@@ -487,8 +547,8 @@ plotS1 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS1.pdf"),
-    plot = plotS1,
+    filename = paste0(root_dir, "/plots/figureS2.pdf"),
+    plot = plotS2,
     device = "pdf",
     width = 10,
     height = 8,
@@ -497,7 +557,7 @@ plotS1 <- {
   )
 }
 
-# figure S2 -------------------------------------------------------------------------------------------------------
+# figure S3 -------------------------------------------------------------------------------------------------------
 
 tmp <- do.call(rbind, c(data_3, data_4))
 tmp <- tmp[tmp$exposure %in% c("spm") &
@@ -600,7 +660,7 @@ f <- {
     debug = debug
   )
 }
-plotS2 <- {
+plotS3 <- {
   plot_grid(
     a,
     b,
@@ -624,8 +684,8 @@ plotS2 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS2.pdf"),
-    plot = plotS2,
+    filename = paste0(root_dir, "/plots/figureS3.pdf"),
+    plot = plotS3,
     device = "pdf",
     width = 10,
     height = 8,
@@ -634,7 +694,7 @@ plotS2 <- {
   )
 }
 
-# figure S3 -------------------------------------------------------------------------------------------------------
+# figure S4 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- do.call(rbind, c(data_5, data_6))
@@ -738,7 +798,7 @@ f <- {
     debug = debug
   )
 }
-plotS3 <- {
+plotS4 <- {
   plot_grid(
     a,
     b,
@@ -762,8 +822,85 @@ plotS3 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS3.pdf"),
-    plot = plotS3,
+    filename = paste0(root_dir, "/plots/figureS4.pdf"),
+    plot = plotS4,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+# figure S5 -------------------------------------------------------------------------------------------------------
+
+# params
+data_seasonal <- data_7 %>%
+  group_by(seasonal_df) %>%
+  summarise(
+    qaic = sum(qaic)/1000,
+    rr = mean(rr),
+    cil = mean(cil),
+    ciu = mean(ciu)
+  )
+data_temperature <- data_7 %>%
+  group_by(temperature_df) %>%
+  summarise(
+    qaic = sum(qaic)/1000,
+    rr = mean(rr),
+    cil = mean(cil),
+    ciu = mean(ciu)
+  )
+y_lower_bound <- min(data_seasonal$cil * 0.9995, na.rm = TRUE)
+y_upper_bound <- max(data_seasonal$ciu * 1.0005, na.rm = TRUE)
+
+# Plot 1: seasonal_df vs qaic
+a <- ggplot(data_seasonal, aes(x = seasonal_df, y = qaic)) +
+  geom_point(size = 2.5, color = "blue") +
+  labs(x = "Degrees of Freedom", y = "qAIC", title = " ") +
+  theme_classic()
+
+# Plot 2: seasonal_df vs rr with error bars (cil and ciu)
+b <- ggplot(data_seasonal, aes(x = seasonal_df, y = rr)) +
+  geom_point(size = 2.5, color = "red") +
+  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
+  labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
+  theme_classic()
+
+# Plot 3: temperature_df vs qaic
+c <- ggplot(data_temperature, aes(x = temperature_df, y = qaic)) +
+  geom_point(size = 2.5, color = "blue") +
+  labs(x = "Degrees of Freedom", y = "qAIC", title = " ") +
+  theme_classic()
+
+# Plot 4: temperature_df vs rr with error bars (cil and ciu)
+d <- ggplot(data_temperature, aes(x = temperature_df, y = rr)) +
+  geom_point(size = 2.5, color = "red") +
+  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
+  labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
+  theme_classic()
+
+plotS5 <- plot_grid(
+  a,
+  b,
+  c,
+  d,
+  ncol = 2,
+  labels = c(
+    "[A] qAIC for varying Seasonal DF",
+    "[B] RR for varying Seasonal DF",
+    "[C] qAIC for varying Temperature DF",
+    "[D] RR for varying Temperature DF"
+  ),
+  label_x = 0.05,
+  hjust = 0
+)
+{ 
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS5.pdf"),
+    plot = plotS5,
     device = "pdf",
     width = 10,
     height = 8,

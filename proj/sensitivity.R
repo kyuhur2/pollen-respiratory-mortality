@@ -24,8 +24,8 @@ library(ggplot2)
 # init data (Fukuoka) and params
 {
   outcome <- "resp"
-  lagged_exposure <- "spm_1"
-  lagged_interactive = "pol_1"
+  exposure <- "spm_1"
+  interactive = "pol_1"
   asian_dust_days = "ad"
   holiday = "holiday"
   day_of_week = "dow"
@@ -37,8 +37,8 @@ library(ggplot2)
   
   required_columns <- c(
     outcome,
-    lagged_exposure,
-    lagged_interactive,
+    exposure,
+    interactive,
     asian_dust_days,
     holiday,
     relative_humidity_mean,
@@ -107,7 +107,7 @@ for (temperature_df in temperature_df_range) {
         "data[, '",
         outcome,
         "'] ~ data[, '",
-        lagged_exposure,
+        exposure,
         "'] + ",
         "ns(data[, '", date, "'], df = 1)",
         " + ",
@@ -136,6 +136,7 @@ for (temperature_df in temperature_df_range) {
       
       # calculate metrics
       qaic <- calculate_qaic(model)
+      iqr <- stats::IQR(data[, paste0(exposure)], na.rm = TRUE)
       B <- coef(model)['data[, "spm_1"]']
       se <- Epi::ci.lin(model, subset = '"spm_1"')[1, "StdErr"]
       cil <- Epi::ci.exp(model, subset = '"spm_1"')[1, "2.5%"]
@@ -150,6 +151,7 @@ for (temperature_df in temperature_df_range) {
           seasonal_df = seasonal_df,
           city = city,
           qaic = qaic,
+          iqr = iqr,
           B = B,
           se = se,
           cil <- cil,
@@ -183,6 +185,7 @@ for (temperature_df in temperature_df_range) {
       noninteractive["temperature_df"] == temperature_df &
       noninteractive["seasonal_df"] == seasonal_df,
     ]
+    iqrm <- mean(tmp[, "iqr"])
 
     # aggregated metrics
     if (length(tmp$qaic) == length(cities)) {
@@ -199,9 +202,9 @@ for (temperature_df in temperature_df_range) {
     )
     B <- meta_analysis$b
     se <- meta_analysis$se
-    rr <- exp(meta_analysis$b)
-    cil <- exp((meta_analysis$b - 1.96 * meta_analysis$se))
-    ciu <- exp((meta_analysis$b + 1.96 * meta_analysis$se))
+    rr <- exp(meta_analysis$b * iqrm)
+    cil <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
+    ciu <- exp((meta_analysis$b + 1.96 * meta_analysis$se) * iqrm)
     
     # store aggregated metrics
     noninteractive_aggregated <- rbind(
