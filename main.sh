@@ -2,7 +2,7 @@
 
 # set constants
 seasonal_df=4
-temperature_df=3
+temperature_df=4
 root_dir="/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
 
 # make directories if they don't exist
@@ -20,8 +20,9 @@ Rscript proj/modeling.R bisection_variation=abs25 seasonal_df=$seasonal_df tempe
 Rscript proj/modeling.R bisection_variation=abs50 seasonal_df=$seasonal_df temperature_df=$temperature_df
 Rscript proj/modeling.R bisection_variation=abs75 seasonal_df=$seasonal_df temperature_df=$temperature_df
 
+# run sensitivity analysis
+Rscript proj/sensitivity.R
+
 # create plots
 Rscript proj/plots.R 
 
-# run sensitivity analysis
-Rscript proj/sensitivity.R
