@@ -1014,3 +1014,30 @@ create_interactive_plot <- function(exposure,
   
   return(x)
 }
+
+run_meta_analysis <- function(data) {
+  iqrm <- mean(data$iqrm)
+  meta_analysis <- metafor::rma(
+    yi = data$B,
+    sei = data$se,
+    data = cbind(data$B, data$se),
+    method = "REML"
+  )
+  
+  B <- meta_analysis$b
+  se <- meta_analysis$se
+  rr <- exp(meta_analysis$b * iqrm)
+  cil <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
+  ciu <- exp((meta_analysis$b + 1.96 * meta_analysis$se) * iqrm)
+  
+  return(
+    data.frame(
+      B = B,
+      se = se,
+      cil = cil,
+      ciu = ciu,
+      rr = rr,
+      iqrm = iqrm
+    )
+  )
+}

@@ -165,6 +165,7 @@ for (temperature_df in temperature_df_range) {
 
 # export noninteractive_full
 write.csv(noninteractive, paste0(root_dir, "/data/noninteractive_full.csv"))
+noninteractive <- read.csv(paste0(root_dir, "/data/noninteractive_full.csv"))
 
 # aggregated sum(qaic), pooled rr/ciu/cil across cities
 noninteractive_aggregated <- data.frame(
@@ -217,7 +218,8 @@ for (temperature_df in temperature_df_range) {
         se = se,
         cil = cil,
         ciu = ciu,
-        rr = rr
+        rr = rr,
+        iqrm = iqrm
       )
     )
   }
