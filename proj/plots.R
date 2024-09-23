@@ -603,7 +603,7 @@ b <- {
 c <- {
   create_interactive_plot(
     exposure = "spm",
-    outcome = "resp65",
+    outcome = "resp",
     lags = c(0, 1, 2),
     data = data_3,
     cutoffs_vec = cutoffs_vec_perc,
@@ -618,7 +618,7 @@ c <- {
 d <- {
   create_interactive_plot(
     exposure = "spm",
-    outcome = "resp65",
+    outcome = "resp",
     lags = c(0, 1, 2),
     data = data_4,
     cutoffs_vec = cutoffs_vec_abs,
@@ -633,7 +633,7 @@ d <- {
 e <- {
   create_interactive_plot(
     exposure = "spm",
-    outcome = "circ65",
+    outcome = "circ",
     lags = c(0, 1, 2),
     data = data_3,
     cutoffs_vec = cutoffs_vec_perc,
@@ -648,7 +648,7 @@ e <- {
 f <- {
   create_interactive_plot(
     exposure = "spm",
-    outcome = "circ65",
+    outcome = "circ",
     lags = c(0, 1, 2),
     data = data_4,
     cutoffs_vec = cutoffs_vec_abs,
@@ -835,22 +835,46 @@ plotS4 <- {
 # figure S5 -------------------------------------------------------------------------------------------------------
 
 # params
-data_seasonal <- data_7 %>%
-  group_by(seasonal_df) %>%
-  summarise(
-    qaic = sum(qaic)/1000,
-    rr = mean(rr),
-    cil = mean(cil),
-    ciu = mean(ciu)
+seasonal_df_range <- 2:7
+data_seasonal <- data.frame()
+for (i in seasonal_df_range) {
+  tmp <- data_7[data_7$seasonal_df == i, ]
+  meta_tmp <- run_meta_analysis(tmp)
+  data_seasonal <- rbind(
+    data_seasonal,
+    data.frame(
+      seasonal_df = mean(tmp$seasonal_df),
+      qaic = sum(tmp$qaic),
+      B = meta_tmp$B,
+      se = meta_tmp$se,
+      cil = meta_tmp$cil,
+      ciu = meta_tmp$ciu,
+      rr = meta_tmp$rr,
+      iqrm = meta_tmp$iqrm
+    )
   )
-data_temperature <- data_7 %>%
-  group_by(temperature_df) %>%
-  summarise(
-    qaic = sum(qaic)/1000,
-    rr = mean(rr),
-    cil = mean(cil),
-    ciu = mean(ciu)
+}
+
+temperature_df_range <- 2:7
+data_temperature <- data.frame()
+for (i in temperature_df_range) {
+  tmp <- data_7[data_7$temperature_df == i, ]
+  meta_tmp <- run_meta_analysis(tmp)
+  data_temperature <- rbind(
+    data_temperature,
+    data.frame(
+      temperature_df = mean(tmp$temperature_df),
+      qaic = sum(tmp$qaic),
+      B = meta_tmp$B,
+      se = meta_tmp$se,
+      cil = meta_tmp$cil,
+      ciu = meta_tmp$ciu,
+      rr = meta_tmp$rr,
+      iqrm = meta_tmp$iqrm
+    )
   )
+}
+
 y_lower_bound <- min(data_seasonal$cil * 0.9995, na.rm = TRUE)
 y_upper_bound <- max(data_seasonal$ciu * 1.0005, na.rm = TRUE)
 
