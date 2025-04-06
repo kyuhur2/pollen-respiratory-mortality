@@ -900,7 +900,7 @@ create_noninteractive_plot <- function(exposure,
     geom_point(size = 2.5,
                color = point_color,
                shape = point_shape) +
-    labs(x = NULL, y = "RR per IQR Increase", title = " ") +
+    labs(x = NULL, y = "RR per IQRM increase", title = " ") +
     theme_classic() +
     theme(
       strip.background = element_blank(),
@@ -988,7 +988,7 @@ create_interactive_plot <- function(exposure,
     geom_point(size = 2.5) +
     labs(
       x = "Lag 0      Lag 0      Lag 1      Lag 1      Lag 2      Lag 2",
-      y = "RR per IQR Increase",
+      y = "RR per IQRM increase",
       title = " ",
       shape = legend_label,
       color = legend_label

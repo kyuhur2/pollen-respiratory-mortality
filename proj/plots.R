@@ -332,7 +332,35 @@ plot3 <- {
   )
 }
 
+# table S1 --------------------------------------------------------------------------------------------------------
+
+tmp <- do.call(rbind, c(data_1, data_2))
+
+# filter to spm / all|circ|resp / lag 0,1,2 and select the desired columns
+tmp <- tmp %>%
+  filter(
+    exposure == "spm",
+    outcome  %in% c("all", "circ", "resp"),
+    lag      %in% c("0", "1", "2")
+  ) %>%
+  select(
+    I2,
+    p.Qtest,
+    rr,
+    cil,
+    ciu,
+    exposure,
+    outcome,
+    lag
+  )
+
+write.csv(tmp, file = file.path(root_dir, "tables/tableS1.csv"), row.names = FALSE)
+
 # figure S1 -------------------------------------------------------------------------------------------------------
+
+# Skip -- Map of Japan
+
+# figure S2 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- data_0[data_0$exposure %in% c("spm") &
@@ -399,7 +427,7 @@ bottom_row <- plot_grid(
   align = 'hv',
   axis = 'tblr'
 )
-plotS1 <- {
+plotS2 <- {
   plot_grid(
     top_row,
     bottom_row,
@@ -409,8 +437,8 @@ plotS1 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS1.pdf"),
-    plot = plotS1,
+    filename = paste0(root_dir, "/plots/figureS2.pdf"),
+    plot = plotS2,
     device = "pdf",
     width = 10,
     height = 8,
@@ -419,7 +447,7 @@ plotS1 <- {
   )
 }
 
-# figure S2 -------------------------------------------------------------------------------------------------------
+# figure S3 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- do.call(rbind, c(data_1, data_2))
@@ -523,7 +551,7 @@ f <- {
     debug = debug
   )
 }
-plotS2 <- {
+plotS3 <- {
   plot_grid(
     a,
     b,
@@ -547,8 +575,8 @@ plotS2 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS2.pdf"),
-    plot = plotS2,
+    filename = paste0(root_dir, "/plots/figureS3.pdf"),
+    plot = plotS3,
     device = "pdf",
     width = 10,
     height = 8,
@@ -557,7 +585,7 @@ plotS2 <- {
   )
 }
 
-# figure S3 -------------------------------------------------------------------------------------------------------
+# figure S4 -------------------------------------------------------------------------------------------------------
 
 tmp <- do.call(rbind, c(data_3, data_4))
 tmp <- tmp[tmp$exposure %in% c("spm") &
@@ -660,7 +688,7 @@ f <- {
     debug = debug
   )
 }
-plotS3 <- {
+plotS4 <- {
   plot_grid(
     a,
     b,
@@ -684,8 +712,8 @@ plotS3 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS3.pdf"),
-    plot = plotS3,
+    filename = paste0(root_dir, "/plots/figureS4.pdf"),
+    plot = plotS4,
     device = "pdf",
     width = 10,
     height = 8,
@@ -694,7 +722,7 @@ plotS3 <- {
   )
 }
 
-# figure S4 -------------------------------------------------------------------------------------------------------
+# figure S5 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- do.call(rbind, c(data_5, data_6))
@@ -798,7 +826,7 @@ f <- {
     debug = debug
   )
 }
-plotS4 <- {
+plotS5 <- {
   plot_grid(
     a,
     b,
@@ -822,8 +850,8 @@ plotS4 <- {
 }
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS4.pdf"),
-    plot = plotS4,
+    filename = paste0(root_dir, "/plots/figureS5.pdf"),
+    plot = plotS5,
     device = "pdf",
     width = 10,
     height = 8,
@@ -832,7 +860,7 @@ plotS4 <- {
   )
 }
 
-# figure S5 -------------------------------------------------------------------------------------------------------
+# figure S6 -------------------------------------------------------------------------------------------------------
 
 # params
 seasonal_df_range <- 2:7
@@ -906,7 +934,7 @@ d <- ggplot(data_temperature, aes(x = temperature_df, y = rr)) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
 
-plotS5 <- plot_grid(
+plotS6 <- plot_grid(
   a,
   b,
   c,
@@ -923,8 +951,8 @@ plotS5 <- plot_grid(
 )
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS5.pdf"),
-    plot = plotS5,
+    filename = paste0(root_dir, "/plots/figureS6.pdf"),
+    plot = plotS6,
     device = "pdf",
     width = 10,
     height = 8,
