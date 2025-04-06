@@ -1,6 +1,7 @@
 .DS_Store
 **/.R*
-*.csv
+data/*.csv
+data-misc/*.csv
 *.RData
 
 data/
