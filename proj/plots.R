@@ -373,20 +373,67 @@ tmp <- tmp %>%
 
 write.csv(tmp, file = file.path(root_dir, "tables/tableS3.csv"), row.names = FALSE)
 
-tmp <- tmp %>%
+tables3_1 <- tmp %>%
   filter(
     outcome == "resp",
     bisection_method %in% c("perc75", "perc80", "perc85")
   ) %>%
   select(I2, p.Qtest, outcome, lag, quantile, bisection_method)
 
-write.csv(tmp, file = file.path(root_dir, "tables/tableS3-1.csv"), row.names = FALSE)
+write.csv(tables3_1, file = file.path(root_dir, "tables/tableS3-1.csv"), row.names = FALSE)
 
 # table s4 --------------------------------------------------------------------------------------------------------
 
 # pooled city-specific coefficients of the interaction term between daily SPM concentration and pollen levels
 
+tmp <- do.call(rbind, c(data_1, data_2))
 
+# filter to spm / all|circ|resp / lag 0,1,2 and select the desired columns
+tmp <- tmp %>%
+  filter(
+    exposure == "spm",
+    outcome %in% c("all", "circ", "resp"),
+    lag %in% c("0", "1", "2")
+  ) %>%
+  select(
+    I2,
+    Q,
+    p.Qtest,
+    rr,
+    cil,
+    ciu,
+    exposure,
+    outcome,
+    lag,
+    quantile,
+    iqrm,
+    bisection_method
+  ) %>%
+  mutate(
+    I2 = round(I2, 3),
+    Q = round(Q, 3),
+    p.Qtest = round(p.Qtest, 3),
+    rr = round(rr, 4),
+    cil = round(cil, 4),
+    ciu = round(ciu, 4),
+    iqrm = round(iqrm, 2)
+  )
+
+tables4_A <- tmp %>%
+  filter(outcome == "all") %>%
+  select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
+
+tables4_B <- tmp %>%
+  filter(outcome == "all") %>%
+  select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
+
+tables4_C <- tmp %>%
+  filter(outcome == "all") %>%
+  select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
+
+write.csv(tables4_A, file = file.path(root_dir, "tables/tableS4-A.csv"), row.names = FALSE)
+write.csv(tables4_B, file = file.path(root_dir, "tables/tableS4-B.csv"), row.names = FALSE)
+write.csv(tables4_C, file = file.path(root_dir, "tables/tableS4-C.csv"), row.names = FALSE)
 
 # figure S1 -------------------------------------------------------------------------------------------------------
 
