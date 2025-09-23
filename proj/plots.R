@@ -424,11 +424,11 @@ tables4_A <- tmp %>%
   select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
 
 tables4_B <- tmp %>%
-  filter(outcome == "all") %>%
+  filter(outcome == "circ") %>%
   select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
 
 tables4_C <- tmp %>%
-  filter(outcome == "all") %>%
+  filter(outcome == "resp") %>%
   select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
 
 write.csv(tables4_A, file = file.path(root_dir, "tables/tableS4-A.csv"), row.names = FALSE)
