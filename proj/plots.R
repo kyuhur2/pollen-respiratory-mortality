@@ -373,6 +373,15 @@ tmp <- tmp %>%
 
 write.csv(tmp, file = file.path(root_dir, "tables/tableS3.csv"), row.names = FALSE)
 
+tmp <- tmp %>%
+  filter(
+    outcome == "resp",
+    bisection_method %in% c("perc75", "perc80", "perc85")
+  ) %>%
+  select(I2, p.Qtest, outcome, lag, quantile, bisection_method)
+
+write.csv(tmp, file = file.path(root_dir, "tables/tableS3-1.csv"), row.names = FALSE)
+
 # table s4 --------------------------------------------------------------------------------------------------------
 
 # pooled city-specific coefficients of the interaction term between daily SPM concentration and pollen levels
