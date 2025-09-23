@@ -521,7 +521,7 @@ run_metafor_noninteractive <- function(data, exposure, outcome, lags) {
   iqrm <- mean(data[, "iqr"]) # calculate iqr for each column related to "exposure" in data
   
   # initialize matrix for results
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu")
   results <- matrix(
     numeric(0),
     nrow = length(lags),
@@ -543,9 +543,10 @@ run_metafor_noninteractive <- function(data, exposure, outcome, lags) {
     )
     
     # store results from meta-analysis in matrix
-    results[k, 1:4] <- c(meta_analysis$b,
+    results[k, 1:5] <- c(meta_analysis$b,
                          meta_analysis$se,
                          meta_analysis$I2,
+                         meta_analysis$QE,
                          meta_analysis$QEp)
     
     # calculate relative risk (RR) and confidence intervals (CI)
@@ -582,7 +583,7 @@ run_metafor_quartile <- function(data,
     "interactive3.exposure",
     "interactive4.exposure"
   )
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -605,9 +606,10 @@ run_metafor_quartile <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -656,7 +658,7 @@ run_metafor_tercile <- function(data,
   quantile_names <- c("interactive1.exposure",
                       "interactive2.exposure",
                       "interactive3.exposure")
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -679,9 +681,10 @@ run_metafor_tercile <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -728,7 +731,7 @@ run_metafor_bisection <- function(data,
   
   # initialize matrix for results
   quantile_names <- c("interactive1.exposure", "interactive2.exposure")
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -751,9 +754,10 @@ run_metafor_bisection <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -802,7 +806,7 @@ run_metafor_bisection_conf <- function(data,
   
   # initialize matrix for results
   quantile_names <- c("interactive1.exposure", "interactive2.exposure")
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -825,9 +829,10 @@ run_metafor_bisection_conf <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)

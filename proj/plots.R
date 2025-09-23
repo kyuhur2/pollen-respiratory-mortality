@@ -16,32 +16,34 @@ source(paste0(root_dir, "/proj/functions.R"))
 data_0 <- {
   read.csv(file = paste0(root_dir, "/data/metafor_noninteractive.csv"))
 }
-data_1 <- {
-  list(
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_perc75.csv"
-    )),
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_perc80.csv"
-    )),
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_perc85.csv"
-    ))
+data_1 <- list(
+  transform(
+    read.csv(file.path(root_dir, "data/metafor_bisection_perc75.csv")),
+    bisection_method = "perc75"
+  ),
+  transform(
+    read.csv(file.path(root_dir, "data/metafor_bisection_perc80.csv")),
+    bisection_method = "perc80"
+  ),
+  transform(
+    read.csv(file.path(root_dir, "data/metafor_bisection_perc85.csv")),
+    bisection_method = "perc85"
   )
-}
-data_2 <- {
-  list(
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs25.csv"
-    )),
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs50.csv"
-    )),
-    read.csv(file = paste0(
-      root_dir, "/data/metafor_bisection_abs75.csv"
-    ))
+)
+data_2 <- list(
+  transform(
+    read.csv(file.path(root_dir, "data/metafor_bisection_abs25.csv")),
+    bisection_method = "abs25"
+  ),
+  transform(
+    read.csv(file.path(root_dir, "data/metafor_bisection_abs50.csv")),
+    bisection_method = "abs50"
+  ),
+  transform(
+    read.csv(file.path(root_dir, "data/metafor_bisection_abs75.csv")),
+    bisection_method = "abs75"
   )
-}
+)
 
 # no2 conf
 data_3 <- {
@@ -332,7 +334,9 @@ plot3 <- {
   )
 }
 
-# table S1 --------------------------------------------------------------------------------------------------------
+# table S3 --------------------------------------------------------------------------------------------------------
+
+# table S1 and table S2 are provided by Wei-Ling (descriptive analysis)
 
 tmp <- do.call(rbind, c(data_1, data_2))
 
@@ -340,21 +344,40 @@ tmp <- do.call(rbind, c(data_1, data_2))
 tmp <- tmp %>%
   filter(
     exposure == "spm",
-    outcome  %in% c("all", "circ", "resp"),
-    lag      %in% c("0", "1", "2")
+    outcome %in% c("all", "circ", "resp"),
+    lag %in% c("0", "1", "2")
   ) %>%
   select(
     I2,
+    Q,
     p.Qtest,
     rr,
     cil,
     ciu,
     exposure,
     outcome,
-    lag
+    lag,
+    quantile,
+    iqrm,
+    bisection_method
+  ) %>%
+  mutate(
+    I2 = round(I2, 3),
+    Q = round(Q, 3),
+    p.Qtest = round(p.Qtest, 3),
+    rr = round(rr, 4),
+    cil = round(cil, 4),
+    ciu = round(ciu, 4),
+    iqrm = round(iqrm, 2)
   )
 
-write.csv(tmp, file = file.path(root_dir, "tables/tableS1.csv"), row.names = FALSE)
+write.csv(tmp, file = file.path(root_dir, "tables/tableS3.csv"), row.names = FALSE)
+
+# table s4 --------------------------------------------------------------------------------------------------------
+
+# pooled city-specific coefficients of the interaction term between daily SPM concentration and pollen levels
+
+
 
 # figure S1 -------------------------------------------------------------------------------------------------------
 
