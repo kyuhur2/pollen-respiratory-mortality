@@ -218,7 +218,7 @@ tmp <- tmp[tmp$exposure %in% c("spm") &
              tmp$lag %in% c("0", "1", "2"), ]
 y_lower_bound <- min(tmp$cil, na.rm = TRUE)
 y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
-cutoffs_vec_perc <- c(75, 80, 85)
+cutoffs_vec_perc <- c("75th", "80th", "85th")
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
 
@@ -232,7 +232,7 @@ a <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff \n(%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -262,7 +262,7 @@ c <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -292,7 +292,7 @@ e <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug

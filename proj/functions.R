@@ -905,16 +905,17 @@ create_noninteractive_plot <- function(exposure,
     geom_point(size = 2.5,
                color = point_color,
                shape = point_shape) +
-    labs(x = NULL, y = "RR per IQRM increase", title = " ") +
+    labs(x = NULL, y = "RR", title = " ") +
     theme_classic() +
     theme(
       strip.background = element_blank(),
       strip.text = element_text(face = "bold"),
-      panel.spacing = unit(0.5, "lines")
+      strip.placement = "outside",          # place strips outside panels
+      plot.margin = margin(5.5, 5.5, 12, 5.5)  # give a bit more bottom space
     ) +
     scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
-                       labels = label_number(accuracy = 0.01)) +
-    facet_grid(~ facet_group, scales = "free_x", space = "free")
+                       labels = scales::label_number(accuracy = 0.01)) +
+    facet_grid(~ facet_group, scales = "free_x", space = "free", switch = "x")
   
   return(x)
 }
@@ -993,7 +994,7 @@ create_interactive_plot <- function(exposure,
     geom_point(size = 2.5) +
     labs(
       x = "Lag 0      Lag 0      Lag 1      Lag 1      Lag 2      Lag 2",
-      y = "RR per IQRM increase",
+      y = "RR",
       title = " ",
       shape = legend_label,
       color = legend_label
