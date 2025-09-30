@@ -993,7 +993,7 @@ create_interactive_plot <- function(exposure,
                color = "black") +
     geom_point(size = 2.5) +
     labs(
-      x = "Lag 0      Lag 0      Lag 1      Lag 1      Lag 2      Lag 2",
+      x = NULL,
       y = "RR",
       title = " ",
       shape = legend_label,
@@ -1007,7 +1007,8 @@ create_interactive_plot <- function(exposure,
       legend.margin = margin(0, 0, 0, 0),
       legend.box.margin = margin(-5, 5, -5, -5),
       legend.title = element_text(size = 10, face = "bold"),
-      strip.text = element_markdown()
+      strip.text = element_markdown(),
+      plot.margin = margin(5.5, 5.5, 16, 5.5)
     ) +
     scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
                        labels = label_number(accuracy = 0.01)) +
@@ -1018,7 +1019,20 @@ create_interactive_plot <- function(exposure,
     scale_shape_manual(values = point_shapes) +
     scale_color_manual(values = point_colors)
   
-  return(x)
+  # add one centered "Lag 0 / Lag 1 / Lag 2" under each Low–High pair
+  n_pairs <- length(lags) # e.g., 3
+  xs <- c(0.23, 0.48, 0.73)
+  lag_labels <- paste0("Lag ", lags)
+  
+  xg <- cowplot::ggdraw(x)
+  for (i in seq_along(xs)) {
+    xg <- xg + cowplot::draw_label(
+      lag_labels[i],
+      x = xs[i], y = 0.02, vjust = 0, fontface = "bold", size = 10
+    )
+  }
+  
+  return(xg)
 }
 
 run_meta_analysis <- function(data) {
