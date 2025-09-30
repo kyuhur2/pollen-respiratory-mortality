@@ -602,13 +602,13 @@ make_row_max <- function(data, var, exposure_label, stat_label = "Max") {
 # build table
 tableS2 <- dplyr::bind_rows(
   make_row_median_iqr(tmp, SO2,  "SO2 (ppb)", "Median, IQR"),
-  make_row_max(tmp,       SO2,  "SO2 (ppb)", "Max"),
+  make_row_max(tmp, SO2,  "SO2 (ppb)", "Max"),
   make_row_median_iqr(tmp, NO2,  "NO2 (ppb)", "Median, IQR"),
-  make_row_max(tmp,       NO2,  "NO2 (ppb)", "Max"),
+  make_row_max(tmp, NO2,  "NO2 (ppb)", "Max"),
   make_row_median_iqr(tmp, Tave, "Mean Temperature (°C)", "Median, IQR"),
-  make_row_max(tmp,       Tave, "Mean Temperature (°C)", "Max"),
+  make_row_max(tmp, Tave, "Mean Temperature (°C)", "Max"),
   make_row_median_iqr(tmp, RHave, "Relative Humidity (%)", "Median, IQR"),
-  make_row_max(tmp,       RHave, "Relative Humidity (%)", "Max")
+  make_row_max(tmp, RHave, "Relative Humidity (%)", "Max")
 )
 
 write.csv(tableS2, file = file.path(root_dir, "tables/tableS2.csv"), row.names = FALSE)
@@ -834,7 +834,7 @@ a <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff \n(%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -864,7 +864,7 @@ c <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -894,7 +894,7 @@ e <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -971,7 +971,7 @@ a <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff \n(%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -1001,7 +1001,7 @@ c <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -1031,7 +1031,7 @@ e <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -1109,7 +1109,7 @@ a <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff \n(%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -1139,7 +1139,7 @@ c <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
@@ -1169,7 +1169,7 @@ e <- {
     cutoffs_vec = cutoffs_vec_perc,
     y_lower_bound = y_lower_bound,
     y_upper_bound = y_upper_bound,
-    legend_label = "Pollen \nCutoff (%)",
+    legend_label = "Pollen \nCutoff",
     point_shapes = c(15, 16, 17, 18),
     point_colors = c("red", "blue", "green", "purple"),
     debug = debug
