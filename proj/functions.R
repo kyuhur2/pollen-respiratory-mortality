@@ -521,7 +521,7 @@ run_metafor_noninteractive <- function(data, exposure, outcome, lags) {
   iqrm <- mean(data[, "iqr"]) # calculate iqr for each column related to "exposure" in data
   
   # initialize matrix for results
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu")
   results <- matrix(
     numeric(0),
     nrow = length(lags),
@@ -543,9 +543,10 @@ run_metafor_noninteractive <- function(data, exposure, outcome, lags) {
     )
     
     # store results from meta-analysis in matrix
-    results[k, 1:4] <- c(meta_analysis$b,
+    results[k, 1:5] <- c(meta_analysis$b,
                          meta_analysis$se,
                          meta_analysis$I2,
+                         meta_analysis$QE,
                          meta_analysis$QEp)
     
     # calculate relative risk (RR) and confidence intervals (CI)
@@ -582,7 +583,7 @@ run_metafor_quartile <- function(data,
     "interactive3.exposure",
     "interactive4.exposure"
   )
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -605,9 +606,10 @@ run_metafor_quartile <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -656,7 +658,7 @@ run_metafor_tercile <- function(data,
   quantile_names <- c("interactive1.exposure",
                       "interactive2.exposure",
                       "interactive3.exposure")
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -679,9 +681,10 @@ run_metafor_tercile <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -728,7 +731,7 @@ run_metafor_bisection <- function(data,
   
   # initialize matrix for results
   quantile_names <- c("interactive1.exposure", "interactive2.exposure")
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -751,9 +754,10 @@ run_metafor_bisection <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -802,7 +806,7 @@ run_metafor_bisection_conf <- function(data,
   
   # initialize matrix for results
   quantile_names <- c("interactive1.exposure", "interactive2.exposure")
-  matrix_columns <- c("B", "se", "I2", "p.Qtest", "rr", "cil", "ciu", "quantile")
+  matrix_columns <- c("B", "se", "I2", "Q", "p.Qtest", "rr", "cil", "ciu", "quantile")
   results <- matrix(
     numeric(0),
     nrow = (length(lags)) * length(quantile_names),
@@ -825,9 +829,10 @@ run_metafor_bisection_conf <- function(data,
                                         method = "REML")
           
           # store results from meta-analysis in matrix
-          results[row_number, 1:4] <- c(meta_analysis$b,
+          results[row_number, 1:5] <- c(meta_analysis$b,
                                         meta_analysis$se,
                                         meta_analysis$I2,
+                                        meta_analysis$QE,
                                         meta_analysis$QEp)
           results[row_number, "rr"] <- exp(meta_analysis$b * iqrm)
           results[row_number, "cil"] <- exp((meta_analysis$b - 1.96 * meta_analysis$se) * iqrm)
@@ -900,16 +905,17 @@ create_noninteractive_plot <- function(exposure,
     geom_point(size = 2.5,
                color = point_color,
                shape = point_shape) +
-    labs(x = NULL, y = "RR per IQR Increase", title = " ") +
+    labs(x = NULL, y = "RR", title = " ") +
     theme_classic() +
     theme(
       strip.background = element_blank(),
       strip.text = element_text(face = "bold"),
-      panel.spacing = unit(0.5, "lines")
+      strip.placement = "outside",          # place strips outside panels
+      plot.margin = margin(5.5, 5.5, 12, 5.5)  # give a bit more bottom space
     ) +
     scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
-                       labels = label_number(accuracy = 0.01)) +
-    facet_grid(~ facet_group, scales = "free_x", space = "free")
+                       labels = scales::label_number(accuracy = 0.01)) +
+    facet_grid(~ facet_group, scales = "free_x", space = "free", switch = "x")
   
   return(x)
 }
@@ -987,8 +993,8 @@ create_interactive_plot <- function(exposure,
                color = "black") +
     geom_point(size = 2.5) +
     labs(
-      x = "Lag 0      Lag 0      Lag 1      Lag 1      Lag 2      Lag 2",
-      y = "RR per IQR Increase",
+      x = NULL,
+      y = "RR",
       title = " ",
       shape = legend_label,
       color = legend_label
@@ -1001,7 +1007,8 @@ create_interactive_plot <- function(exposure,
       legend.margin = margin(0, 0, 0, 0),
       legend.box.margin = margin(-5, 5, -5, -5),
       legend.title = element_text(size = 10, face = "bold"),
-      strip.text = element_markdown()
+      strip.text = element_markdown(),
+      plot.margin = margin(5.5, 5.5, 16, 5.5)
     ) +
     scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
                        labels = label_number(accuracy = 0.01)) +
@@ -1012,7 +1019,20 @@ create_interactive_plot <- function(exposure,
     scale_shape_manual(values = point_shapes) +
     scale_color_manual(values = point_colors)
   
-  return(x)
+  # add one centered "Lag 0 / Lag 1 / Lag 2" under each Low–High pair
+  n_pairs <- length(lags) # e.g., 3
+  xs <- c(0.23, 0.48, 0.73)
+  lag_labels <- paste0("Lag ", lags)
+  
+  xg <- cowplot::ggdraw(x)
+  for (i in seq_along(xs)) {
+    xg <- xg + cowplot::draw_label(
+      lag_labels[i],
+      x = xs[i], y = 0.02, vjust = 0, fontface = "bold", size = 10
+    )
+  }
+  
+  return(xg)
 }
 
 run_meta_analysis <- function(data) {

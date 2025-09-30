@@ -80,7 +80,8 @@ noninteractive <- data.frame(
 # progress bar
 progress <- progress::progress_bar$new(
   format = "  [:bar] :percent :current/:total :elapsed",
-  total = (max(temperature_df_range) - min(temperature_df_range) + 1) * (max(seasonal_df_range) - min(seasonal_df_range) + 1) * length(cities),
+  total = (max(temperature_df_range) - min(temperature_df_range) + 1) *
+    (max(seasonal_df_range) - min(seasonal_df_range) + 1) * length(cities),
   width = 100
 )
 

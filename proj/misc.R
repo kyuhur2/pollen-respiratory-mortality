@@ -22,16 +22,6 @@ library(lattice)
   source(paste0(root_dir, "/proj/functions.R"))  # import functions
 }
 
-# import data
-{
-  tmp <- read.csv(file = paste0(root_dir, "/data/fdata.csv"))
-  data <- read.csv(file = paste0(
-    root_dir,
-    paste0("/data/data_", bisection_variation, ".csv")
-  ))
-  data[, "date"] <- as.Date(data[, "date"])
-}
-
 # set params from R args
 {
   params <- parse_args(commandArgs(trailingOnly = TRUE))
@@ -41,6 +31,16 @@ library(lattice)
   bisection_variation <- "abs75"  # perc75, perc80, perc85, abs25, abs50, abs75
   seasonal_df <- 4
   temperature_df <- 3
+}
+
+# import data
+{
+  tmp <- read.csv(file = paste0(root_dir, "/data/fdata.csv"))
+  data <- read.csv(file = paste0(
+    root_dir,
+    paste0("/data/data_", bisection_variation, ".csv")
+  ))
+  data[, "date"] <- as.Date(data[, "date"])
 }
 
 # set params and import data
@@ -74,21 +74,48 @@ library(lattice)
 
 # non-interactive qaic --------------------------------------------------------------------------------------------
 
+# set params
+{
+  outcome <- "resp"
+  exposure <- "spm_1"
+  interactive = "pol_1"
+  asian_dust_days = "ad"
+  holiday = "holiday"
+  day_of_week = "dow"
+  day_of_year = "doy"
+  year = "year"
+  temp_mean = "tave07"
+  date = "date"
+  relative_humidity_mean = "rhave"
+  
+  required_columns <- c(
+    outcome,
+    exposure,
+    interactive,
+    asian_dust_days,
+    holiday,
+    relative_humidity_mean,
+    day_of_week,
+    day_of_year,
+    year,
+    temp_mean,
+    date
+  )
+  cities <- c(
+    "Fukuoka",
+    "Kumamoto",
+    "Nagasaki",
+    "Oita",
+    "Saga",
+    "Kagoshima",
+    "Miyazaki",
+    "Kitakyushu"
+  )
+}
+
 # define the terms with constants
 terms <- list(
-  paste0("ns(data[, '", temp_mean, "'], df = 3)"),
-  paste0("data[, '", relative_humidity_mean, "']"),
-  paste0("data[, '", day_of_week, "']"),
-  paste0("factor(data[, '", asian_dust_days, "'])"),
-  paste0("factor(data[, '", holiday, "'])"),
-  paste0("ns(data[, '", date, "'], df = 1)"),
-  paste0(
-    "ns(data[, '",
-    day_of_year,
-    "'], df = 4):factor(data[, '",
-    year,
-    "'])"
-  )
+  paste0("factor(data[, '", asian_dust_days, "'])")
 )
 
 # intermediary data structures to hold formulas and qaics
@@ -96,37 +123,52 @@ formulas <- character()
 qaics <- numeric()
 p_values <- logical()
 
-# naive model
-formula <- paste0("data[, '", outcome, "'] ~ data[, '", lagged_exposure, "']")
-model <- glm(
-  as.formula(formula),
-  data = data[data["city"] == city & complete.cases(data[, required_columns]), ],
-  family = quasipoisson
-)
-qaic <- calculate_qaic(model)
+for (city in cities) {
+  # naive model
+  formula <- paste0(
+    "data[, '", outcome, "'] ~ ",
+    "data[, '", exposure, "']",
+    "ns(data[, '", date, "'], df = 1) + ",  # long-term trend
+    "ns(data[, '", day_of_year, "'], df = 4):factor(data[, '", year, "']) + ",  # seasonal trend
+    "data[, '", day_of_week, "'] + ",  # day of week
 
-# update intermediary data structures
-formulas[1] <- formula
-qaics[1] <- qaic
-p_values[1] <- NA
+    "ns(data[, '", temp_mean, "'], df = 4) + ",  # temperature
 
-# loop through the terms and calculate qAIC after adding each one
-for (i in 1:length(terms)) {
-  # update the formula by adding the new term
-  formula <- paste(formula, "+", terms[i])
-  updated_model <- glm(
+    # -- optional --
+    "data[, '", relative_humidity_mean, "'] + ",  # relative humidity
+    "factor(data[, '", holiday, "']) + ",  # holiday
+    "factor(data[, '", asian_dust_days, "'])"  # asian dust day
+  )
+  model <- glm(
     as.formula(formula),
     data = data[data["city"] == city & complete.cases(data[, required_columns]), ],
     family = quasipoisson
   )
-  qaic <- calculate_qaic(updated_model)
-  p_value <- calculate_model_p_value(model, updated_model)
-
+  qaic <- calculate_qaic(model)
+  
   # update intermediary data structures
-  formulas[i + 1] <- terms[[i]]
-  qaics[i + 1] <- qaic
-  p_values[i + 1] <- p_value
-  model <- updated_model
+  formulas[1] <- formula
+  qaics[1] <- qaic
+  p_values[1] <- NA
+  
+  # loop through the terms and calculate qAIC after adding each one
+  for (i in 1:length(terms)) {
+    # update the formula by adding the new term
+    formula <- paste(formula, "+", terms[i])
+    updated_model <- glm(
+      as.formula(formula),
+      data = data[data["city"] == city & complete.cases(data[, required_columns]), ],
+      family = quasipoisson
+    )
+    qaic <- calculate_qaic(updated_model)
+    p_value <- calculate_model_p_value(model, updated_model)
+  
+    # update intermediary data structures
+    formulas[i + 1] <- terms[[i]]
+    qaics[i + 1] <- qaic
+    p_values[i + 1] <- p_value
+    model <- updated_model
+  }
 }
 
 noninteractive <- data.frame(formulas = formulas,
