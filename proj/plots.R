@@ -3,6 +3,7 @@ library(ggplot2)
 library(ggtext)
 library(dplyr)
 library(cowplot)
+library(tibble)
 
 # setup -----------------------------------------------------------------------------------------------------------
 
@@ -103,6 +104,18 @@ data_6 <- {
 
 # sensitivity analysis
 data_7 <- read.csv(file = paste0(root_dir, "/data/noninteractive_aggregated.csv"))
+
+# params
+CITIES <- c(
+  "Fukuoka",
+  "Kitakyushu",
+  "Kumamoto",
+  "Kagoshima",
+  "Nagasaki",
+  "Oita",
+  "Miyazaki",
+  "Saga"
+)
 
 # figure 1 --------------------------------------------------------------------------------------------------------
 
@@ -334,14 +347,286 @@ plot3 <- {
   )
 }
 
+# table 1 ---------------------------------------------------------------------------------------------------------
+
+tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
+
+# filter for feb, mar, apr
+tmp <- tmp %>%
+  filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
+  mutate(city = factor(city, levels = CITIES))
+
+# per-city totals + daily mean/median
+city_summary <- tmp %>%
+  group_by(city) %>%
+  summarise(
+    total_all  = sum(all,  na.rm = TRUE),
+    total_circ = sum(circ, na.rm = TRUE),
+    total_resp = sum(resp, na.rm = TRUE),
+    mean_all   = round(mean(all,  na.rm = TRUE), 1),
+    sd_all     = round(sd(all,   na.rm = TRUE), 1),
+    mean_circ  = round(mean(circ,  na.rm = TRUE), 1),
+    sd_circ    = round(sd(circ,   na.rm = TRUE), 1),
+    mean_resp  = round(mean(resp,  na.rm = TRUE), 1),
+    sd_resp    = round(sd(resp,   na.rm = TRUE), 1),
+    .groups = "drop"
+  )
+
+# sum by date -> compute totals/means/medians across days
+combined_daily <- tmp %>%
+  group_by(date) %>%
+  summarise(
+    all  = sum(all,  na.rm = TRUE),
+    circ = sum(circ, na.rm = TRUE),
+    resp = sum(resp, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+combined_summary <- combined_daily %>%
+  summarise(
+    city = "Combined",
+    total_all  = sum(all,  na.rm = TRUE),
+    total_circ = sum(circ, na.rm = TRUE),
+    total_resp = sum(resp, na.rm = TRUE),
+    mean_all   = round(mean(all,  na.rm = TRUE), 1),
+    sd_all     = round(sd(all,   na.rm = TRUE), 1),
+    mean_circ  = round(mean(circ,  na.rm = TRUE), 1),
+    sd_circ    = round(sd(circ,   na.rm = TRUE), 1),
+    mean_resp  = round(mean(resp,  na.rm = TRUE), 1),
+    sd_resp    = round(sd(resp,   na.rm = TRUE), 1)
+  )
+
+# bind everything together
+summary_all <- bind_rows(
+  combined_summary,
+  city_summary %>% mutate(city = as.character(city)),
+)
+
+# format
+table1 <- summary_all %>%
+  transmute(
+    City = city,
+    `All-cause Total`                 = formatC(total_all,  format = "d", big.mark = ","),
+    `Cardiovascular Total`            = formatC(total_circ, format = "d", big.mark = ","),
+    `Respiratory Total`               = formatC(total_resp, format = "d", big.mark = ","),
+    `All-cause Daily (Mean, SD)`      = sprintf("%.1f ± %.1f", mean_all, sd_all),
+    `Cardiovascular Daily (Mean, SD)` = sprintf("%.1f ± %.1f", mean_circ, sd_circ),
+    `Respiratory Daily (Mean, SD)`    = sprintf("%.1f ± %.1f", mean_resp, sd_resp)
+  ) %>%
+  mutate(City = factor(City, levels = c("Combined", CITIES))) %>%
+  arrange(City)
+
+write.csv(table1, file = file.path(root_dir, "tables/table1.csv"), row.names = FALSE)
+
+# table 2 ---------------------------------------------------------------------------------------------------------
+
+tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
+
+tmp <- tmp %>%
+  filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
+  mutate(city = factor(city, levels = CITIES))
+
+# row builders (one row per statistic, columns = cities)
+make_row_mean_sd <- function(data, var, exposure_label, stat_label = "Mean ± SD") {
+  vals <- data %>%
+    group_by(city) %>%
+    summarise(m = round(mean({{var}}, na.rm = TRUE), 1),
+              s = round(sd({{var}},   na.rm = TRUE), 1),
+              .groups = "drop") %>%
+    arrange(city) %>%
+    transmute(val = paste0(m, " ± ", s)) %>%
+    pull(val)
+  tibble::tibble_row(Exposure = exposure_label, Statistics = stat_label, !!!setNames(as.list(vals), CITIES))
+}
+
+make_row_median_iqr <- function(data, var, exposure_label, stat_label = "Median, IQR") {
+  vals <- data %>%
+    group_by(city) %>%
+    summarise(med = round(median({{var}}, na.rm = TRUE), 1),
+              iqr = round(IQR({{var}},    na.rm = TRUE), 1),
+              .groups = "drop") %>%
+    arrange(city) %>%
+    transmute(val = paste0(med, ", ", iqr)) %>%
+    pull(val)
+  tibble::tibble_row(Exposure = exposure_label, Statistics = stat_label, !!!setNames(as.list(vals), CITIES))
+}
+
+make_row_max <- function(data, var, exposure_label, stat_label = "Max") {
+  vals <- data %>%
+    group_by(city) %>%
+    summarise(mx = round(max({{var}}, na.rm = TRUE), 1), .groups = "drop") %>%
+    arrange(city) %>%
+    transmute(val = as.character(mx)) %>%
+    pull(val)
+  tibble::tibble_row(Exposure = exposure_label, Statistics = stat_label, !!!setNames(as.list(vals), CITIES))
+}
+
+make_row_percentile <- function(data, var, p, exposure_label, stat_label_prefix) {
+  # p in [0,1], e.g., 0.75 for 75th percentile
+  label <- paste0(stat_label_prefix, "th percentile")
+  vals <- data %>%
+    group_by(city) %>%
+    summarise(q = round(as.numeric(quantile({{var}}, probs = p, na.rm = TRUE, type = 7)), 1),
+              .groups = "drop") %>%
+    arrange(city) %>%
+    transmute(val = as.character(q)) %>%
+    pull(val)
+  tibble::tibble_row(Exposure = exposure_label, Statistics = label, !!!setNames(as.list(vals), CITIES))
+}
+
+# build table
+table2 <- bind_rows(
+  make_row_mean_sd(tmp, SPM, "SPM (μg/m3)", "Mean ± SD"),
+  make_row_median_iqr(tmp, SPM, "SPM (μg/m3)", "Median, IQR"),
+  make_row_max(tmp, SPM, "SPM (μg/m3)", "Max"),
+  make_row_mean_sd(tmp, SuHi, "Pollen count", "Mean ± SD"),
+  make_row_median_iqr(tmp, SuHi, "Pollen count", "Median, IQR"),
+  make_row_percentile(tmp, SuHi, 0.75, "Pollen count", "75"),
+  make_row_percentile(tmp, SuHi, 0.80, "Pollen count", "80"),
+  make_row_percentile(tmp, SuHi, 0.85, "Pollen count", "85"),
+  make_row_max(tmp, SuHi, "Pollen count", "Maximum"),
+  make_row_mean_sd(tmp, SO2, "SO2 (ppb)", "Mean ± SD"),
+  make_row_mean_sd(tmp, NO2, "NO2 (ppb)", "Mean ± SD"),
+  make_row_mean_sd(tmp, Tave, "Mean Temperature (°C)", "Mean ± SD"),
+  make_row_mean_sd(tmp, RHave, "Relative Humidity (%)", "Mean ± SD")
+)
+
+write.csv(table2, file = file.path(root_dir, "tables/table2.csv"), row.names = FALSE)
+
+# table S1 --------------------------------------------------------------------------------------------------------
+
+tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
+
+# filter for feb, mar, apr
+tmp <- tmp %>%
+  filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
+  mutate(city = factor(city, levels = CITIES))
+
+# per-city totals + daily mean/median but by age >=65
+city_summary_65 <- tmp %>%
+  group_by(city) %>%
+  summarise(
+    total_all65  = sum(all.age65,  na.rm = TRUE),
+    total_circ65 = sum(circ.age65, na.rm = TRUE),
+    total_resp65 = sum(resp.age65, na.rm = TRUE),
+    mean_all65   = round(mean(all.age65,  na.rm = TRUE), 1),
+    sd_all65     = round(sd(all.age65,   na.rm = TRUE), 1),
+    mean_circ65  = round(mean(circ.age65,  na.rm = TRUE), 1),
+    sd_circ65    = round(sd(circ.age65,   na.rm = TRUE), 1),
+    mean_resp65  = round(mean(resp.age65,  na.rm = TRUE), 1),
+    sd_resp65    = round(sd(resp.age65,   na.rm = TRUE), 1),
+    .groups = "drop"
+  )
+
+# sum by date -> compute totals/means/medians across days
+combined_daily_65 <- tmp %>%
+  group_by(date) %>%
+  summarise(
+    all.age65  = sum(all.age65,  na.rm = TRUE),
+    circ.age65 = sum(circ.age65, na.rm = TRUE),
+    resp.age65 = sum(resp.age65, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+combined_summary_65 <- combined_daily_65 %>%
+  summarise(
+    city = "Combined",
+    total_all65  = sum(all.age65,  na.rm = TRUE),
+    total_circ65 = sum(circ.age65, na.rm = TRUE),
+    total_resp65 = sum(resp.age65, na.rm = TRUE),
+    mean_all65   = round(mean(all.age65,  na.rm = TRUE), 1),
+    sd_all65     = round(sd(all.age65,   na.rm = TRUE), 1),
+    mean_circ65  = round(mean(circ.age65,  na.rm = TRUE), 1),
+    sd_circ65    = round(sd(circ.age65,   na.rm = TRUE), 1),
+    mean_resp65  = round(mean(resp.age65,  na.rm = TRUE), 1),
+    sd_resp65    = round(sd(resp.age65,   na.rm = TRUE), 1)
+  )
+
+# bind everything together
+summary_all_65 <- bind_rows(
+  combined_summary_65,
+  city_summary_65 %>% mutate(city = as.character(city))
+)
+
+# format
+tableS1 <- summary_all_65 %>%
+  transmute(
+    City = city,
+    `All-cause Total (65+)`      = formatC(total_all65,  format = "d", big.mark = ","),
+    `Cardiovascular Total (65+)` = formatC(total_circ65, format = "d", big.mark = ","),
+    `Respiratory Total (65+)`    = formatC(total_resp65, format = "d", big.mark = ","),
+    `All-cause Daily (Mean, SD)`      = sprintf("%.1f ± %.1f", mean_all65,  sd_all65),
+    `Cardiovascular Daily (Mean, SD)` = sprintf("%.1f ± %.1f", mean_circ65, sd_circ65),
+    `Respiratory Daily (Mean, SD)`    = sprintf("%.1f ± %.1f", mean_resp65, sd_resp65)
+  ) %>%
+  mutate(City = factor(City, levels = c("Combined", CITIES))) %>%
+  arrange(City)
+
+write.csv(tableS1, file = file.path(root_dir, "tables/tableS1.csv"), row.names = FALSE)
+
+# table S2 --------------------------------------------------------------------------------------------------------
+
+tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
+
+tmp <- tmp %>%
+  filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
+  mutate(city = factor(city, levels = CITIES))
+
+# row builders (one row per statistic, columns = cities)
+make_row_median_iqr <- function(data, var, exposure_label, stat_label = "Median, IQR") {
+  vals <- data %>%
+    group_by(city) %>%
+    summarise(
+      med = round(median({{var}}, na.rm = TRUE), 1),
+      iqr = round(IQR({{var}},    na.rm = TRUE), 1),
+      .groups = "drop"
+    ) %>%
+    arrange(city) %>%
+    transmute(val = paste0(med, ", ", iqr)) %>%
+    pull(val)
+  tibble::tibble_row(Exposure = exposure_label, Statistics = stat_label,
+             !!!setNames(as.list(vals), CITIES))
+}
+
+make_row_max <- function(data, var, exposure_label, stat_label = "Max") {
+  vals <- data %>%
+    group_by(city) %>%
+    summarise(mx = round(max({{var}}, na.rm = TRUE), 1), .groups = "drop") %>%
+    arrange(city) %>%
+    transmute(val = as.character(mx)) %>%
+    pull(val)
+  tibble::tibble_row(Exposure = exposure_label, Statistics = stat_label,
+             !!!setNames(as.list(vals), CITIES))
+}
+
+# build table
+tableS2 <- dplyr::bind_rows(
+  make_row_median_iqr(tmp, SO2,  "SO2 (ppb)", "Median, IQR"),
+  make_row_max(tmp,       SO2,  "SO2 (ppb)", "Max"),
+  make_row_median_iqr(tmp, NO2,  "NO2 (ppb)", "Median, IQR"),
+  make_row_max(tmp,       NO2,  "NO2 (ppb)", "Max"),
+  make_row_median_iqr(tmp, Tave, "Mean Temperature (°C)", "Median, IQR"),
+  make_row_max(tmp,       Tave, "Mean Temperature (°C)", "Max"),
+  make_row_median_iqr(tmp, RHave, "Relative Humidity (%)", "Median, IQR"),
+  make_row_max(tmp,       RHave, "Relative Humidity (%)", "Max")
+)
+
+write.csv(tableS2, file = file.path(root_dir, "tables/tableS2.csv"), row.names = FALSE)
+
 # table S3 --------------------------------------------------------------------------------------------------------
 
-# table S1 and table S2 are provided by Wei-Ling (descriptive analysis)
+# manually created
+
+# table S4 --------------------------------------------------------------------------------------------------------
+
+# manually created
+
+# table S5 --------------------------------------------------------------------------------------------------------
 
 tmp <- do.call(rbind, c(data_1, data_2))
 
-# filter to spm / all|circ|resp / lag 0,1,2 and select the desired columns
-tmp <- tmp %>%
+# filter to spm / all | circ | resp / lag 0, 1, 2 and select the desired columns
+tableS5_1 <- tmp %>%
   filter(
     exposure == "spm",
     outcome %in% c("all", "circ", "resp"),
@@ -371,24 +656,24 @@ tmp <- tmp %>%
     iqrm = round(iqrm, 2)
   )
 
-write.csv(tmp, file = file.path(root_dir, "tables/tableS3.csv"), row.names = FALSE)
+write.csv(tableS5_1, file = file.path(root_dir, "tables/tableS5-1.csv"), row.names = FALSE)
 
-tables3_1 <- tmp %>%
+tableS5 <- tableS5_1 %>%
   filter(
     outcome == "resp",
     bisection_method %in% c("perc75", "perc80", "perc85")
   ) %>%
   select(I2, p.Qtest, outcome, lag, quantile, bisection_method)
 
-write.csv(tables3_1, file = file.path(root_dir, "tables/tableS3-1.csv"), row.names = FALSE)
+write.csv(tableS5, file = file.path(root_dir, "tables/tableS5.csv"), row.names = FALSE)
 
-# table s4 --------------------------------------------------------------------------------------------------------
+# table S6 --------------------------------------------------------------------------------------------------------
 
 # pooled city-specific coefficients of the interaction term between daily SPM concentration and pollen levels
 
 tmp <- do.call(rbind, c(data_1, data_2))
 
-# filter to spm / all|circ|resp / lag 0,1,2 and select the desired columns
+# filter to spm / all | circ | resp / lag 0, 1, 2 and select the desired columns
 tmp <- tmp %>%
   filter(
     exposure == "spm",
@@ -419,21 +704,21 @@ tmp <- tmp %>%
     iqrm = round(iqrm, 2)
   )
 
-tables4_A <- tmp %>%
+tableS6_A <- tmp %>%
   filter(outcome == "all") %>%
   select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
 
-tables4_B <- tmp %>%
+tableS6_B <- tmp %>%
   filter(outcome == "circ") %>%
   select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
 
-tables4_C <- tmp %>%
+tableS6_C <- tmp %>%
   filter(outcome == "resp") %>%
   select(rr, cil, ciu, outcome, lag, quantile, bisection_method)
 
-write.csv(tables4_A, file = file.path(root_dir, "tables/tableS4-A.csv"), row.names = FALSE)
-write.csv(tables4_B, file = file.path(root_dir, "tables/tableS4-B.csv"), row.names = FALSE)
-write.csv(tables4_C, file = file.path(root_dir, "tables/tableS4-C.csv"), row.names = FALSE)
+write.csv(tableS6_A, file = file.path(root_dir, "tables/tableS6-A.csv"), row.names = FALSE)
+write.csv(tableS6_B, file = file.path(root_dir, "tables/tableS6-B.csv"), row.names = FALSE)
+write.csv(tableS6_C, file = file.path(root_dir, "tables/tableS6-C.csv"), row.names = FALSE)
 
 # figure S1 -------------------------------------------------------------------------------------------------------
 
