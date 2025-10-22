@@ -61,7 +61,6 @@ library(data.table)
 }
 
 # run non-interactive model; three for loops, creating a matrix of (outcomes * exposures * city)
-# run non-interactive model; three for loops, creating a matrix of (outcomes * exposures * city)
 {
   noninteractive <- list()  # temp list to append data.frames
   for (outcome in OUTCOMES) {
