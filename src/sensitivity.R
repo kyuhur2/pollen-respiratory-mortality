@@ -8,7 +8,7 @@ library(ggplot2)
 {
   rm(list = ls())
   root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
-  source(paste0(root_dir, "/proj/functions.R"))  # import functions
+  source(paste0(root_dir, "/src/functions.R"))  # import functions
 }
 
 # import data

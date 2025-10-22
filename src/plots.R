@@ -9,7 +9,7 @@ library(tibble)
 
 rm(list = ls())  # reset
 root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
-source(paste0(root_dir, "/proj/functions.R"))
+source(paste0(root_dir, "/src/functions.R"))
 
 # main ------------------------------------------------------------------------------------------------------------
 

@@ -27,15 +27,15 @@ The generated figures can be found under `/plots`.
 The relevant layout of the repo is:
 
 - `/data`: Houses all the data (initial, intermediary, final). Crucial requires `lagdata.csv` to run the code. 
-- `/proj`: Houses all the `R` scripts to run the project
+- `/src`: Houses all the `R` scripts to run the project
 - `/plots`: Houses all the resulting figures and supplementary figures
 
-Diving deeper into the `/proj` directory, it is divided in four main parts:
+Diving deeper into the `/src` directory, it is divided in four main parts:
 
-- [preprocessing.R](proj/preprocessing.R)
-- [modeling.R](proj/modeling.R)
-- [plots.R](proj/plots.R)
-- [sensitivity.R](proj/sensitivity.R)
+- [preprocessing.R](src/preprocessing.R)
+- [modeling.R](src/modeling.R)
+- [plots.R](src/plots.R)
+- [sensitivity.R](src/sensitivity.R)
 
 ## Preprocessing
 
@@ -79,7 +79,7 @@ The following figures are included in this project:
 - **Figure S2:** Interactive + confounding model, `NO2` as confounder
 - **Figure S3:** Interactive + confounding model, `SO2` as confounder
 
-Code for Figure 1 was moved to [`misc.R`](/proj/misc.R) because the library utilized to create part of the map tries to fetch data from a dead link.
+Code for Figure 1 was moved to [`misc.R`](/src/misc.R) because the library utilized to create part of the map tries to fetch data from a dead link.
 
 ## Sensitivity
 
