@@ -18,7 +18,7 @@ library(lattice)
 # initialize project state
 {
   rm(list = ls())
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
   source(paste0(root_dir, "/proj/functions.R"))  # import functions
 }
 

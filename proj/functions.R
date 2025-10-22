@@ -11,7 +11,7 @@ options(error = traceback)
 
 TEST <- FALSE
 if (TEST == TRUE) {
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
   data <- read.csv(file = paste0(
     root_dir,
     paste0("/data/data_", bisection_variation, ".csv")
