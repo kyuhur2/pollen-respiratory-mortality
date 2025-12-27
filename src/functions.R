@@ -964,18 +964,14 @@ create_interactive_plot <- function(exposure,
   data$group <- factor(rep(levels, each = length(cutoffs_vec)), levels = levels)
   
   # labellers for facet()
-  group_labeller <- function(variable, value) {
-    return(
-      c(
-        "<b>Low</b>",
-        "<b>High</b>",
-        "<b>Low</b>",
-        "<b>High</b>",
-        "<b>Low</b>",
-        "<b>High</b>"
-      )
-    )
-  }
+  group_labeller <- ggplot2::as_labeller(c(
+    "Low L0"  = "<b>Low</b>",
+    "High L0" = "<b>High</b>",
+    "Low L1"  = "<b>Low</b>",
+    "High L1" = "<b>High</b>",
+    "Low L2"  = "<b>Low</b>",
+    "High L2" = "<b>High</b>"
+  ))
   
   # plot using facet_wrap to create side-by-side plots
   x <- ggplot(data,
