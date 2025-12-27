@@ -266,6 +266,18 @@ plot2 <- {
     rel_heights = c(1, 1)
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figure2_nocaption.pdf"),
+    plot = plot2,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plot2 <- plot_grid(
   plot2,
   caption_grob,
@@ -278,7 +290,7 @@ plot2 <- plot_grid(
     plot = plot2,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -429,6 +441,18 @@ plot3 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figure3_nocaption.pdf"),
+    plot = plot3,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plot3 <- plot_grid(
   plot3,
   caption_grob,
@@ -441,7 +465,7 @@ plot3 <- plot_grid(
     plot = plot3,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -957,6 +981,18 @@ plotS2 <- {
     rel_heights = c(1, 1)
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS2_nocaption.pdf"),
+    plot = plotS2,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plotS2 <- plot_grid(
   plotS2,
   caption_grob,
@@ -969,7 +1005,7 @@ plotS2 <- plot_grid(
     plot = plotS2,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -1120,6 +1156,18 @@ plotS3 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS3_nocaption.pdf"),
+    plot = plotS3,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plotS3 <- plot_grid(
   plotS3,
   caption_grob,
@@ -1282,6 +1330,18 @@ plotS4 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS4_nocaption.pdf"),
+    plot = plotS4,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plotS4 <- plot_grid(
   plotS4,
   caption_grob,
@@ -1445,6 +1505,18 @@ plotS5 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS5_nocaption.pdf"),
+    plot = plotS5,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plotS5 <- plot_grid(
   plotS5,
   caption_grob,
@@ -1569,6 +1641,18 @@ plotS6 <- plot_grid(
   label_x = 0.05,
   hjust = 0
 )
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS6_nocaption.pdf"),
+    plot = plotS6,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
 plotS6 <- plot_grid(
   plotS6,
   caption_grob,
@@ -1581,7 +1665,7 @@ plotS6 <- plot_grid(
     plot = plotS6,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
