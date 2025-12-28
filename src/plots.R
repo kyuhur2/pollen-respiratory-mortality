@@ -1633,10 +1633,10 @@ plotS6 <- plot_grid(
   d,
   ncol = 2,
   labels = c(
-    "[A] qAIC for Seasonal DF of 2 to 7",
-    "[B] RR for Seasonal DF of 2 to 7",
-    "[C] qAIC for Temperature DF of 2 to 7",
-    "[D] RR for Temperature DF of 2 to 7"
+    "[A] qAIC for Seasonal DF between 2 to 7",
+    "[B] RR for Seasonal DF between 2 to 7",
+    "[C] qAIC for Temperature DF between 2 to 7",
+    "[D] RR for Temperature DF between 2 to 7"
   ),
   label_x = 0.05,
   hjust = 0
