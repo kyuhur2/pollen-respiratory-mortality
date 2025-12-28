@@ -4,12 +4,25 @@ library(ggtext)
 library(dplyr)
 library(cowplot)
 library(tibble)
+library(gridtext)
+library(showtext)
+library(sysfonts)
+library(magick)
 
 # setup -----------------------------------------------------------------------------------------------------------
 
 rm(list = ls())  # reset
-root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-source(paste0(root_dir, "/proj/functions.R"))
+root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+source(paste0(root_dir, "/src/functions.R"))
+
+sysfonts::font_add(
+  family = "Times New Roman",
+  regular = "Times New Roman.ttf",
+  bold = "Times New Roman Bold.ttf",
+  italic = "Times New Roman Italic.ttf",
+  bolditalic = "Times New Roman Bold Italic.ttf"
+)
+showtext::showtext_auto()
 
 # main ------------------------------------------------------------------------------------------------------------
 
@@ -119,8 +132,47 @@ CITIES <- c(
 
 # figure 1 --------------------------------------------------------------------------------------------------------
 
-# moved to misc.R because code no longer works (one of the libraries is pulling data from a location that doesn't
-# exist)
+# params
+caption_text = paste0(
+  "**Figure 1.** Map of cities (left) and location of pollen clinics and air pollution stations (right)."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
+
+# import figure 1 
+plot1 <- cowplot::ggdraw() +
+  cowplot::draw_image(
+    magick::image_read_pdf(paste0(root_dir, "/plots/figure1-pre.pdf"), density = 300)[1],
+    x = 0,
+    y = 0,
+    width = 1,
+    height = 1
+  )
+plot1 <- cowplot::plot_grid(
+  plot1,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
+)
+ggsave(
+  filename = paste0(root_dir, "/plots/figure1.pdf"),
+  plot = plot1,
+  device = "pdf",
+  width = 10,
+  height = 6.5,
+  units = "in",
+  dpi = 300
+)
 
 # figure 2 --------------------------------------------------------------------------------------------------------
 
@@ -132,6 +184,23 @@ y_lower_bound <- min(tmp$cil, na.rm = TRUE)
 y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 point_color = "red"
 point_shape = 18
+caption_text = paste0(
+  "**Figure 2.** Association between SPM and all-cause, respiratory and cardiovascular mortality during the spring",
+  " months (February to April) from 1989 to 2014. RR on the y-axis is defined as the relative risk per interquartile",
+  " range mean (IQRM) increase. Results are pooled from random-effects meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # plots
 a <- {
@@ -199,11 +268,29 @@ plot2 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figure2.pdf"),
+    filename = paste0(root_dir, "/plots/figure2_nocaption.pdf"),
     plot = plot2,
     device = "pdf",
     width = 10,
     height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plot2 <- plot_grid(
+  plot2,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)  # adjust caption height if needed
+)
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figure2.pdf"),
+    plot = plot2,
+    device = "pdf",
+    width = 10,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -221,6 +308,25 @@ y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 cutoffs_vec_perc <- c("75th", "80th", "85th")
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
+caption_text = paste0(
+  "**Figure 3**. Association between SPM and all-cause, respiratory and cardiovascular mortality by quantiles (low or",
+  " high) determined by levels of pollen cutoffs (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50,",
+  " 75 grains per cm<sup>2</sup>) during the spring months (February to April) from 1989 to 2014. RR on the y-axis is",
+  " defined as the relative risk per interquartile range mean (IQRM) increase. Results are pooled from random-effects",
+  " meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # plots
 a <- {
@@ -337,11 +443,29 @@ plot3 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figure3.pdf"),
+    filename = paste0(root_dir, "/plots/figure3_nocaption.pdf"),
     plot = plot3,
     device = "pdf",
     width = 10,
     height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plot3 <- plot_grid(
+  plot3,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)  # adjust caption height if needed
+)
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figure3.pdf"),
+    plot = plot3,
+    device = "pdf",
+    width = 10,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -722,7 +846,47 @@ write.csv(tableS6_C, file = file.path(root_dir, "tables/tableS6-C.csv"), row.nam
 
 # figure S1 -------------------------------------------------------------------------------------------------------
 
-# Skip -- Map of Japan
+# params
+caption_text = paste0(
+  "**Figure 1.** Map of cities (left) and location of pollen clinics and air pollution stations (right)."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
+
+# import figure S1 
+plotS1 <- cowplot::ggdraw() +
+  cowplot::draw_image(
+    magick::image_read_pdf(paste0(root_dir, "/plots/figure1.pdf"), density = 300)[1],
+    x = 0,
+    y = 0,
+    width = 1,
+    height = 1
+  )
+plot1 <- cowplot::plot_grid(
+  plot1,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
+)
+ggsave(
+  filename = paste0(root_dir, "/plots/figure1.pdf"),
+  plot = plot1,
+  device = "pdf",
+  width = 10,
+  height = 6.5,
+  units = "in",
+  dpi = 300
+)
 
 # figure S2 -------------------------------------------------------------------------------------------------------
 
@@ -734,6 +898,24 @@ y_lower_bound <- min(tmp$cil, na.rm = TRUE)
 y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 point_color = "red"
 point_shape = 18
+caption_text <- paste0(
+  "**Figure S2.** Association between SPM and all-cause, respiratory and cardiovascular mortality of ages 65 and above",
+  " by levels of pollen cutoffs (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50, 75 grains per",
+  " cm<sup>2</sup>) during the spring months (February to April) from 1989 to 2014. RR on the y-axis is defined as the",
+  " relative risk per interquartile range mean (IQRM) increase. Results are pooled from random-effects meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # plots
 a <- {
@@ -799,13 +981,31 @@ plotS2 <- {
     rel_heights = c(1, 1)
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS2_nocaption.pdf"),
+    plot = plotS2,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plotS2 <- plot_grid(
+  plotS2,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
+)
 { 
   ggsave(
     filename = paste0(root_dir, "/plots/figureS2.pdf"),
     plot = plotS2,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -823,6 +1023,25 @@ y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 cutoffs_vec_perc <- c(75, 80, 85)
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
+caption_text <- paste0(
+  "**Figure S3.** Association between SPM and all-cause, respiratory and cardiovascular mortality of ages 65 and above",
+  " by quantiles (low or high) determined by levels of pollen cutoffs (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>)",
+  " and count (25, 50, 75 grains per cm<sup>2</sup>) during the spring months (February to April) from 1989 to 2014.",
+  " RR on the y-axis is defined as the relative risk per interquartile range mean (IQRM) increase. Results are pooled",
+  " from random-effects meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # plots
 a <- {
@@ -937,13 +1156,31 @@ plotS3 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS3_nocaption.pdf"),
+    plot = plotS3,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plotS3 <- plot_grid(
+  plotS3,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
+)
 { 
   ggsave(
     filename = paste0(root_dir, "/plots/figureS3.pdf"),
     plot = plotS3,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -960,6 +1197,25 @@ y_upper_bound <- max(tmp$ciu, na.rm = TRUE) * 1.005
 cutoffs_vec_perc <- c(75, 80, 85)
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
+caption_text <- paste0(
+  "**Figure S4.** Two-pollutant model with NO<sup>2</sup> as the confounder. Association between SPM and all-cause",
+  " respiratory and cardiovascular mortality by quantiles (low or high) determined by levels of pollen cutoffs",
+  " (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50, 75 grains per cm<sup>2</sup>) during the",
+  " spring months (February to April) from 1989 to 2014. RR on the y-axis is defined as the relative risk per",
+  " interquartile range mean (IQRM) increase. Results are pooled from random-effects meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # plots
 a <- {
@@ -1074,13 +1330,31 @@ plotS4 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS4_nocaption.pdf"),
+    plot = plotS4,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plotS4 <- plot_grid(
+  plotS4,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
+)
 { 
   ggsave(
     filename = paste0(root_dir, "/plots/figureS4.pdf"),
     plot = plotS4,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -1098,6 +1372,25 @@ y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 cutoffs_vec_perc <- c(75, 80, 85)
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
+caption_text <- paste0(
+  "**Figure S5.** Two-pollutant model with SO<sup>2</sup> as the confounder. Association between SPM and all-cause,",
+  " respiratory and cardiovascular mortality by quantiles (low or high) determined by levels of pollen cutoffs",
+  " (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50, 75 grains per cm<sup>2</sup>) during the",
+  " spring months (February to April) from 1989 to 2014. RR on the y-axis is defined as the relative risk per",
+  " interquartile range mean (IQRM) increase. Results are pooled from random-effects meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # plots
 a <- {
@@ -1212,13 +1505,31 @@ plotS5 <- {
     hjust = 0
   )
 }
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS5_nocaption.pdf"),
+    plot = plotS5,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plotS5 <- plot_grid(
+  plotS5,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
+)
 { 
   ggsave(
     filename = paste0(root_dir, "/plots/figureS5.pdf"),
     plot = plotS5,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )
@@ -1269,6 +1580,23 @@ for (i in temperature_df_range) {
 
 y_lower_bound <- min(data_seasonal$cil * 0.9995, na.rm = TRUE)
 y_upper_bound <- max(data_seasonal$ciu * 1.0005, na.rm = TRUE)
+caption_text <- paste0(
+  "**Figure S6.** Variation in quasi-Akaike Information Criterion (qAIC) and relative risk (RR) for natural splines",
+  " degrees of freedom between 2 to 7 of temperature and seasonality term. qAIC was summed and RR was pooled with",
+  " random-effects meta-analysis across eight Kyushu cities with a random-effects meta-analysis."
+)
+caption_grob <- gridtext::textbox_grob(
+  caption_text,
+  x = 0.5, y = 0.5,
+  halign = 0, valign = 0.5,
+  width = grid::unit(1, "npc"),
+  gp = grid::gpar(
+    fontfamily = "Times New Roman",
+    fontsize = 11
+  ),
+  box_gp = grid::gpar(col = NA, fill = NA),
+  margin = grid::unit(c(0, 6, 0, 6), "pt")
+)
 
 # Plot 1: seasonal_df vs qaic
 a <- ggplot(data_seasonal, aes(x = seasonal_df, y = qaic)) +
@@ -1305,13 +1633,31 @@ plotS6 <- plot_grid(
   d,
   ncol = 2,
   labels = c(
-    "[A] qAIC for varying Seasonal DF",
-    "[B] RR for varying Seasonal DF",
-    "[C] qAIC for varying Temperature DF",
-    "[D] RR for varying Temperature DF"
+    "[A] qAIC for Seasonal DF between 2 to 7",
+    "[B] RR for Seasonal DF between 2 to 7",
+    "[C] qAIC for Temperature DF between 2 to 7",
+    "[D] RR for Temperature DF between 2 to 7"
   ),
   label_x = 0.05,
   hjust = 0
+)
+{
+  ggsave(
+    filename = paste0(root_dir, "/plots/figureS6_nocaption.pdf"),
+    plot = plotS6,
+    device = "pdf",
+    width = 10,
+    height = 8,
+    units = "in",
+    dpi = 300
+  )
+}
+
+plotS6 <- plot_grid(
+  plotS6,
+  caption_grob,
+  ncol = 1,
+  rel_heights = c(1, 0.10)
 )
 { 
   ggsave(
@@ -1319,7 +1665,7 @@ plotS6 <- plot_grid(
     plot = plotS6,
     device = "pdf",
     width = 10,
-    height = 8,
+    height = 9,
     units = "in",
     dpi = 300
   )

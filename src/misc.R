@@ -18,8 +18,8 @@ library(lattice)
 # initialize project state
 {
   rm(list = ls())
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-  source(paste0(root_dir, "/proj/functions.R"))  # import functions
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  source(paste0(root_dir, "/src/functions.R"))  # import functions
 }
 
 # set params from R args
@@ -46,7 +46,7 @@ library(lattice)
 # set params and import data
 {
   root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-  source(paste0(root_dir, "/proj/functions.R"))
+  source(paste0(root_dir, "/src/functions.R"))
   
   metafor_noninteractive <- read.csv(file = paste0(root_dir, "/data/metafor_noninteractive.csv"))
   

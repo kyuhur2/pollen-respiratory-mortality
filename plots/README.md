@@ -2,7 +2,7 @@
 
 Plots can be converted from `.pdf` to `.png` format using [imagemagick](https://imagemagick.org/index.php). Imagemagick can be downloaded on macOS with `brew install imagemagick` or on Linux with `sudo apt-get install imagemagick`. The commands to convert is shown below.
 
-Afterwards, run [generate_png_plots.sh](#proj/generate_png_plots.sh) to generate the `.png` versions of the plots.
+Afterwards, run [generate_png_plots.sh](#src/generate_png_plots.sh) to generate the `.png` versions of the plots.
 
 # Figures
 

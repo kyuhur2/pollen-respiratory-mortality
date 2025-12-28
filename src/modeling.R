@@ -13,8 +13,8 @@ library(data.table)
 # initialize project state
 {
   rm(list = ls())
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-  source(paste0(root_dir, "/proj/functions.R"))  # import functions
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  source(paste0(root_dir, "/src/functions.R"))  # import functions
 }
 
 # set params from R args
@@ -60,7 +60,6 @@ library(data.table)
   )
 }
 
-# run non-interactive model; three for loops, creating a matrix of (outcomes * exposures * city)
 # run non-interactive model; three for loops, creating a matrix of (outcomes * exposures * city)
 {
   noninteractive <- list()  # temp list to append data.frames
@@ -280,7 +279,7 @@ library(data.table)
 # set params and import data
 {
   root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-  source(paste0(root_dir, "/proj/functions.R"))
+  source(paste0(root_dir, "/src/functions.R"))
   noninteractive <- read.csv(file = paste0(root_dir, "/data/noninteractive.csv"))
   interactive_bisection <- read.csv(file = paste0(
     root_dir,

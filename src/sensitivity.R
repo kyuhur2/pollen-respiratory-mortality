@@ -7,8 +7,8 @@ library(ggplot2)
 # initialize project state
 {
   rm(list = ls())
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
-  source(paste0(root_dir, "/proj/functions.R"))  # import functions
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  source(paste0(root_dir, "/src/functions.R"))  # import functions
 }
 
 # import data
