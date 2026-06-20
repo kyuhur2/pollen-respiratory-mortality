@@ -3,7 +3,7 @@
 REM Set constants
 set seasonal_df=4
 set temperature_df=4
-set root_dir=C:\Users\kyuhur\Documents\Github\pollen_respiratory_mortality
+set root_dir=C:\Users\kyuhur\Documents\Github\pollen-respiratory-mortality
 
 REM Make directories if they don't exist
 if not exist "%root_dir%\plots" mkdir "%root_dir%\plots"

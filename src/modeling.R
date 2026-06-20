@@ -151,22 +151,48 @@ library(data.table)
           temperature_df = temperature_df
         )
 
-        results[, "city"] <- city
-        intermediary <- append(intermediary, list(results))
+        if (!is.null(results) && length(dim(results)) == 2 && nrow(results) > 0) {
+          results <- as.data.frame(results)
+          results[, "city"] <- city
+          intermediary <- append(intermediary, list(results))
+        } else {
+          cat("[SKIP] bad interactive result:",
+              city, outcome, exposure, "\n")
+        }
       }
 
-      all_columns <- unique(unlist(lapply(intermediary, names)))  # identify unique column names
-      intermediary <- lapply(intermediary, function(df) {
-        missing_columns <- setdiff(all_columns, names(df))
-        if (length(missing_columns) > 0) {
-          df[missing_columns] <- NA
-        }
-        return(df[, all_columns])  # ensure consistent column order across all data frames
-      })
-      interactive_bisection <- append(interactive_bisection, list(do.call(rbind, intermediary)))
+      if (length(intermediary) > 0) {
+        all_columns <- unique(unlist(lapply(intermediary, names)))
+
+        intermediary <- lapply(intermediary, function(df) {
+          missing_columns <- setdiff(all_columns, names(df))
+          if (length(missing_columns) > 0) {
+            df[missing_columns] <- NA
+          }
+          return(df[, all_columns])
+        })
+
+        interactive_bisection <- append(interactive_bisection, list(do.call(rbind, intermediary)))
+      } else {
+        cat("[SKIP] no valid interactive results for:",
+            outcome, exposure, "\n")
+      }
     }
   }
-  interactive_bisection <- do.call(rbind, interactive_bisection)  # collapsing list into data.frame
+
+  # collapsing into dataframe
+  if (exists("interactive_bisection")) {
+    if (is.list(interactive_bisection)) {
+      interactive_bisection <- do.call(rbind, interactive_bisection)
+    }
+
+    write.csv(interactive_bisection,
+              paste0(root_dir,
+                    paste0("/data/interactive_bisection_", bisection_variation, ".csv")),
+              row.names = FALSE)
+  } else {
+    error("Object 'interactive_bisection' not found.")
+  }
 }
 
 # run glm model for interactive confounding model -----------------------------------------------------------------
@@ -278,7 +304,7 @@ library(data.table)
 
 # set params and import data
 {
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
   source(paste0(root_dir, "/src/functions.R"))
   noninteractive <- read.csv(file = paste0(root_dir, "/data/noninteractive.csv"))
   interactive_bisection <- read.csv(file = paste0(
