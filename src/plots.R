@@ -118,6 +118,53 @@ data_6 <- {
 # sensitivity analysis
 data_7 <- read.csv(file = paste0(root_dir, "/data/noninteractive_aggregated.csv"))
 
+# attach t-test data
+read_ttest <- function(suffix) {
+  read.csv(file.path(root_dir, "data", paste0("t-test__", suffix, ".csv"))) %>%
+    mutate(
+      lag = as.character(lag),
+      bisection_method = suffix,
+      significance = case_when(
+        p_value < 0.05 ~ "**",
+        p_value < 0.10 ~ "*",
+        TRUE ~ ""
+      )
+    ) %>%
+    select(exposure, outcome, lag, bisection_method, p_value, significance)
+}
+
+ttest_1 <- lapply(c("perc75", "perc80", "perc85"), read_ttest)
+ttest_2 <- lapply(c("abs25", "abs50", "abs75"), read_ttest)
+ttest_3 <- lapply(c("no2_perc75", "no2_perc80", "no2_perc85"), read_ttest)
+ttest_4 <- lapply(c("no2_abs25", "no2_abs50", "no2_abs75"), read_ttest)
+ttest_5 <- lapply(c("so2_perc75", "so2_perc80", "so2_perc85"), read_ttest)
+ttest_6 <- lapply(c("so2_abs25", "so2_abs50", "so2_abs75"), read_ttest)
+
+attach_ttest <- function(model_list, ttest_list) {
+  Map(
+    function(model_data, test_data) {
+      model_data %>%
+        mutate(
+          lag = as.character(lag),
+          bisection_method = unique(test_data$bisection_method)
+        ) %>%
+        left_join(
+          test_data,
+          by = c("exposure", "outcome", "lag", "bisection_method")
+        )
+    },
+    model_list,
+    ttest_list
+  )
+}
+
+data_1 <- attach_ttest(data_1, ttest_1)
+data_2 <- attach_ttest(data_2, ttest_2)
+data_3 <- attach_ttest(data_3, ttest_3)
+data_4 <- attach_ttest(data_4, ttest_4)
+data_5 <- attach_ttest(data_5, ttest_5)
+data_6 <- attach_ttest(data_6, ttest_6)
+
 # params
 CITIES <- c(
   "Fukuoka",
@@ -550,33 +597,6 @@ tmp <- tmp %>%
   filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
   mutate(city = factor(city, levels = CITIES))
 
-# tmp table
-table2_new <- bind_rows(
-  make_row_mean_sd(tmp, SPMout, "SPM (μg/m3)", "Mean ± SD"),
-  make_row_median_iqr(tmp, SPMout, "SPM (μg/m3)", "Median, IQR"),
-  make_row_max(tmp, SPMout, "SPM (μg/m3)", "Max"),
-  make_row_mean_sd(tmp, SuHiout, "Pollen count", "Mean ± SD"),
-  make_row_median_iqr(tmp, SuHiout, "Pollen count", "Median, IQR"),
-  make_row_percentile(tmp, SuHiout, 0.75, "Pollen count", "75"),
-  make_row_percentile(tmp, SuHiout, 0.80, "Pollen count", "80"),
-  make_row_percentile(tmp, SuHiout, 0.85, "Pollen count", "85"),
-  make_row_max(tmp, SuHiout, "Pollen count", "Maximum"),
-  make_row_mean_sd(tmp, SO2, "SO2 (ppb)", "Mean ± SD"),
-  make_row_mean_sd(tmp, NO2, "NO2 (ppb)", "Mean ± SD"),
-  make_row_mean_sd(tmp, Tave, "Mean Temperature (°C)", "Mean ± SD"),
-  make_row_mean_sd(tmp, RHave, "Relative Humidity (%)", "Mean ± SD")
-)
-
-write.csv(table2_new, file = file.path(root_dir, "tables/table2.csv"), row.names = FALSE)
-
-# separation
-
-tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
-
-tmp <- tmp %>%
-  filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
-  mutate(city = factor(city, levels = CITIES))
-
 # row builders (one row per statistic, columns = cities)
 make_row_mean_sd <- function(data, var, exposure_label, stat_label = "Mean ± SD") {
   vals <- data %>%
@@ -627,9 +647,9 @@ make_row_percentile <- function(data, var, p, exposure_label, stat_label_prefix)
 
 # build table
 table2 <- bind_rows(
-  make_row_mean_sd(tmp, SPM, "SPM (μg/m3)", "Mean ± SD"),
-  make_row_median_iqr(tmp, SPM, "SPM (μg/m3)", "Median, IQR"),
-  make_row_max(tmp, SPM, "SPM (μg/m3)", "Max"),
+  make_row_mean_sd(tmp, SPMout, "SPM (μg/m3)", "Mean ± SD"),
+  make_row_median_iqr(tmp, SPMout, "SPM (μg/m3)", "Median, IQR"),
+  make_row_max(tmp, SPMout, "SPM (μg/m3)", "Max"),
   make_row_mean_sd(tmp, SuHi, "Pollen count", "Mean ± SD"),
   make_row_median_iqr(tmp, SuHi, "Pollen count", "Median, IQR"),
   make_row_percentile(tmp, SuHi, 0.75, "Pollen count", "75"),
@@ -1634,7 +1654,10 @@ a <- ggplot(data_seasonal, aes(x = seasonal_df, y = qaic)) +
 # Plot 2: seasonal_df vs rr with error bars (cil and ciu)
 b <- ggplot(data_seasonal, aes(x = seasonal_df, y = rr)) +
   geom_point(size = 2.5, color = "red") +
-  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  scale_y_continuous(
+    limits = c(y_lower_bound, y_upper_bound),
+    labels = function(x) formatC(x, format = "f", digits = 2)
+  ) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
@@ -1648,7 +1671,10 @@ c <- ggplot(data_temperature, aes(x = temperature_df, y = qaic)) +
 # Plot 4: temperature_df vs rr with error bars (cil and ciu)
 d <- ggplot(data_temperature, aes(x = temperature_df, y = rr)) +
   geom_point(size = 2.5, color = "red") +
-  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  scale_y_continuous(
+    limits = c(y_lower_bound, y_upper_bound),
+    labels = function(x) formatC(x, format = "f", digits = 2)
+  ) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
