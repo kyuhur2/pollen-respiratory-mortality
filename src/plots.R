@@ -891,6 +891,100 @@ write.csv(tableS6_A, file = file.path(root_dir, "tables/tableS6-A.csv"), row.nam
 write.csv(tableS6_B, file = file.path(root_dir, "tables/tableS6-B.csv"), row.names = FALSE)
 write.csv(tableS6_C, file = file.path(root_dir, "tables/tableS6-C.csv"), row.names = FALSE)
 
+# table S8 ----------------------------------------------------------------
+
+format_p <- function(x) {
+  ifelse(
+    is.na(x),
+    "",
+    ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
+  )
+}
+
+make_s8 <- function(data, include_model = FALSE) {
+  data %>%
+    filter(
+      exposure == "spm",
+      outcome %in% c("all", "resp", "circ"),
+      lag %in% c("0", "1", "2")
+    ) %>%
+    mutate(
+      bisection_method = sub("^(no2_|so2_)", "", bisection_method),
+      lag = factor(lag, levels = c("0", "1", "2")),
+      bisection_method = factor(
+        bisection_method,
+        levels = c(
+          "perc75", "perc80", "perc85",
+          "abs25", "abs50", "abs75"
+        )
+      ),
+      outcome = factor(
+        outcome,
+        levels = c("all", "resp", "circ")
+      ),
+      p_value = paste0(format_p(p_value), significance)
+    ) %>%
+    select(
+      any_of("model"),
+      exposure,
+      lag,
+      bisection_method,
+      outcome,
+      p_value
+    ) %>%
+    pivot_wider(
+      names_from = outcome,
+      values_from = p_value,
+      names_prefix = "outcome_"
+    ) %>%
+    arrange(
+      across(any_of("model")),
+      factor(
+        grepl("^abs", bisection_method),
+        levels = c(FALSE, TRUE)
+      ),
+      lag,
+      bisection_method
+    ) %>%
+    rename(
+      `outcome (all)` = outcome_all,
+      `outcome (resp)` = outcome_resp,
+      `outcome (circ)` = outcome_circ
+    )
+}
+
+# Table S8-A: main model
+table_s8a <- make_s8(
+  bind_rows(c(ttest_1, ttest_2))
+)
+
+# Table S8-B: NO2- and SO2-adjusted models
+table_s8b <- bind_rows(
+  bind_rows(c(ttest_3, ttest_4)) %>%
+    mutate(model = "NO2-adjusted"),
+  
+  bind_rows(c(ttest_5, ttest_6)) %>%
+    mutate(model = "SO2-adjusted")
+) %>%
+  make_s8(include_model = TRUE)
+
+write.csv(
+  table_s8a,
+  file.path(root_dir, "tables/tableS8-A.csv"),
+  row.names = FALSE,
+  na = ""
+)
+
+write.csv(
+  table_s8b,
+  file.path(root_dir, "tables/tableS8-B.csv"),
+  row.names = FALSE,
+  na = ""
+)
+
+print(table_s8a)
+print(table_s8b)
+
 # figure S1 -------------------------------------------------------------------------------------------------------
 
 # params

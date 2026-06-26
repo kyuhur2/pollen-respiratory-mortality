@@ -14,12 +14,13 @@ lagdata[, "SuHi0"] <- lagdata[, "SuHi"]
 lagdata[, "date"] <- as.Date(lagdata[, "date"])
 
 # constants
+SUHI <- "SuHiout" # "SuHiout", "SuHi" <- normally this one
 CITIES <- c(
   "Fukuoka", "Kumamoto", "Nagasaki", "Oita", "Saga", "Kagoshima", "Miyazaki", "Kitakyushu"
 )
 POL_COLUMNS_TO_PROCESS <- c(
-  "pol_0", "pol_1", "pol_2", "pol_3", "pol_4", "pol_5", "pol_6", "pol_7", "pol_ma1", "pol_ma2", "pol_ma3", "pol_ma4",
-  "pol_ma5", "pol_ma6", "pol_ma7"
+  "pol_0", "pol_1", "pol_2", "pol_3", "pol_4", "pol_5", "pol_6", "pol_7",
+  "pol_ma1", "pol_ma2", "pol_ma3", "pol_ma4", "pol_ma5", "pol_ma6", "pol_ma7"
 )
 
 # rewrite lagdata
@@ -89,21 +90,21 @@ columns_to_keep <- c(
   "SO2out6",
   "SO2out7",
   
-  "SuHima0.1",
-  "SuHima0.2",
-  "SuHima0.3",
-  "SuHima0.4",
-  "SuHima0.5",
-  "SuHima0.6",
-  "SuHima0.7",
-  "SuHi",
-  "SuHi1",
-  "SuHi2",
-  "SuHi3",
-  "SuHi4",
-  "SuHi5",
-  "SuHi6",
-  "SuHi7"
+  paste0(SUHI, "ma0.1"),
+  paste0(SUHI, "ma0.2"),
+  paste0(SUHI, "ma0.3"),
+  paste0(SUHI, "ma0.4"),
+  paste0(SUHI, "ma0.5"),
+  paste0(SUHI, "ma0.6"),
+  paste0(SUHI, "ma0.7"),
+  paste0(SUHI, ""),
+  paste0(SUHI, "1"),
+  paste0(SUHI, "2"),
+  paste0(SUHI, "3"),
+  paste0(SUHI, "4"),
+  paste0(SUHI, "5")
+  paste0(SUHI, "6"),
+  paste0(SUHI, "7")
 )
 
 columns_to_rename <- c(
@@ -172,21 +173,21 @@ columns_to_rename <- c(
   so2_6 = "SO2out6",
   so2_7 = "SO2out7",
   
-  pol_ma1 = "SuHima0.1",
-  pol_ma2 = "SuHima0.2",
-  pol_ma3 = "SuHima0.3",
-  pol_ma4 = "SuHima0.4",
-  pol_ma5 = "SuHima0.5",
-  pol_ma6 = "SuHima0.6",
-  pol_ma7 = "SuHima0.7",
-  pol_0 = "SuHi",
-  pol_1 = "SuHi1",
-  pol_2 = "SuHi2",
-  pol_3 = "SuHi3",
-  pol_4 = "SuHi4",
-  pol_5 = "SuHi5",
-  pol_6 = "SuHi6",
-  pol_7 = "SuHi7"
+  pol_ma1 = paste0(SUHI, "ma0.1"),
+  pol_ma2 = paste0(SUHI, "ma0.2"),
+  pol_ma3 = paste0(SUHI, "ma0.3"),
+  pol_ma4 = paste0(SUHI, "ma0.4"),
+  pol_ma5 = paste0(SUHI, "ma0.5"),
+  pol_ma6 = paste0(SUHI, "ma0.6"),
+  pol_ma7 = paste0(SUHI, "ma0.7"),
+  pol_0 = paste0(SUHI, ""),
+  pol_1 = paste0(SUHI, "1"),
+  pol_2 = paste0(SUHI, "2"),
+  pol_3 = paste0(SUHI, "3"),
+  pol_4 = paste0(SUHI, "4"),
+  pol_5 = paste0(SUHI, "5")
+  pol_6 = paste0(SUHI, "6"),
+  pol_7 = paste0(SUHI, "7")
 )
 data <- lagdata %>%
   dplyr::select(all_of(columns_to_keep)) %>%
