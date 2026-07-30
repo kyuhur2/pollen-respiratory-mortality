@@ -12,17 +12,36 @@ library(magick)
 # setup -----------------------------------------------------------------------------------------------------------
 
 rm(list = ls())  # reset
-root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+os <- Sys.info()[["sysname"]]
+if ("Darwin" %in% os) {
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  sysfonts::font_add(
+    family = "Times New Roman",
+    regular = "Times New Roman.ttf",
+    bold = "Times New Roman Bold.ttf",
+    italic = "Times New Roman Italic.ttf",
+    bolditalic = "Times New Roman Bold Italic.ttf"
+  )
+  showtext::showtext_auto()
+} else {
+  root_dir <- "C:/Users/kyuhu/OneDrive/Documents/Github/pollen-respiratory-mortality"
+  font_dir <- "C:/Windows/Fonts"
+  font_files <- c(
+    regular    = file.path(font_dir, "times.ttf"),
+    bold       = file.path(font_dir, "timesbd.ttf"),
+    italic     = file.path(font_dir, "timesi.ttf"),
+    bolditalic = file.path(font_dir, "timesbi.ttf")
+  )
+  stopifnot(all(file.exists(font_files)))
+  sysfonts::font_add(
+    family = "Times New Roman",
+    regular = font_files["regular"],
+    bold = font_files["bold"],
+    italic = font_files["italic"],
+    bolditalic = font_files["bolditalic"]
+  )
+}
 source(paste0(root_dir, "/src/functions.R"))
-
-sysfonts::font_add(
-  family = "Times New Roman",
-  regular = "Times New Roman.ttf",
-  bold = "Times New Roman Bold.ttf",
-  italic = "Times New Roman Italic.ttf",
-  bolditalic = "Times New Roman Bold Italic.ttf"
-)
-showtext::showtext_auto()
 
 # main ------------------------------------------------------------------------------------------------------------
 
@@ -32,15 +51,15 @@ data_0 <- {
 }
 data_1 <- list(
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc75.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc75.csv")),
     bisection_method = "perc75"
   ),
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc80.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc80.csv")),
     bisection_method = "perc80"
   ),
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc85.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc85.csv")),
     bisection_method = "perc85"
   )
 )
@@ -117,6 +136,53 @@ data_6 <- {
 
 # sensitivity analysis
 data_7 <- read.csv(file = paste0(root_dir, "/data/noninteractive_aggregated.csv"))
+
+# attach t-test data
+read_ttest <- function(suffix) {
+  read.csv(file.path(root_dir, "data", paste0("t-test__", suffix, ".csv"))) %>%
+    mutate(
+      lag = as.character(lag),
+      bisection_method = suffix,
+      significance = case_when(
+        p_value < 0.05 ~ "**",
+        p_value < 0.10 ~ "*",
+        TRUE ~ ""
+      )
+    ) %>%
+    select(exposure, outcome, lag, bisection_method, p_value, significance)
+}
+
+ttest_1 <- lapply(c("perc75", "perc80", "perc85"), read_ttest)
+ttest_2 <- lapply(c("abs25", "abs50", "abs75"), read_ttest)
+ttest_3 <- lapply(c("no2_perc75", "no2_perc80", "no2_perc85"), read_ttest)
+ttest_4 <- lapply(c("no2_abs25", "no2_abs50", "no2_abs75"), read_ttest)
+ttest_5 <- lapply(c("so2_perc75", "so2_perc80", "so2_perc85"), read_ttest)
+ttest_6 <- lapply(c("so2_abs25", "so2_abs50", "so2_abs75"), read_ttest)
+
+attach_ttest <- function(model_list, ttest_list) {
+  Map(
+    function(model_data, test_data) {
+      model_data %>%
+        mutate(
+          lag = as.character(lag),
+          bisection_method = unique(test_data$bisection_method)
+        ) %>%
+        left_join(
+          test_data,
+          by = c("exposure", "outcome", "lag", "bisection_method")
+        )
+    },
+    model_list,
+    ttest_list
+  )
+}
+
+data_1 <- attach_ttest(data_1, ttest_1)
+data_2 <- attach_ttest(data_2, ttest_2)
+data_3 <- attach_ttest(data_3, ttest_3)
+data_4 <- attach_ttest(data_4, ttest_4)
+data_5 <- attach_ttest(data_5, ttest_5)
+data_6 <- attach_ttest(data_6, ttest_6)
 
 # params
 CITIES <- c(
@@ -544,7 +610,7 @@ write.csv(table1, file = file.path(root_dir, "tables/table1.csv"), row.names = F
 
 # table 2 ---------------------------------------------------------------------------------------------------------
 
-tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
+tmp <- read.csv(paste0(root_dir, "/data/lagdata.csv"))
 
 tmp <- tmp %>%
   filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
@@ -600,9 +666,9 @@ make_row_percentile <- function(data, var, p, exposure_label, stat_label_prefix)
 
 # build table
 table2 <- bind_rows(
-  make_row_mean_sd(tmp, SPM, "SPM (μg/m3)", "Mean ± SD"),
-  make_row_median_iqr(tmp, SPM, "SPM (μg/m3)", "Median, IQR"),
-  make_row_max(tmp, SPM, "SPM (μg/m3)", "Max"),
+  make_row_mean_sd(tmp, SPMout, "SPM (μg/m3)", "Mean ± SD"),
+  make_row_median_iqr(tmp, SPMout, "SPM (μg/m3)", "Median, IQR"),
+  make_row_max(tmp, SPMout, "SPM (μg/m3)", "Max"),
   make_row_mean_sd(tmp, SuHi, "Pollen count", "Mean ± SD"),
   make_row_median_iqr(tmp, SuHi, "Pollen count", "Median, IQR"),
   make_row_percentile(tmp, SuHi, 0.75, "Pollen count", "75"),
@@ -843,6 +909,53 @@ tableS6_C <- tmp %>%
 write.csv(tableS6_A, file = file.path(root_dir, "tables/tableS6-A.csv"), row.names = FALSE)
 write.csv(tableS6_B, file = file.path(root_dir, "tables/tableS6-B.csv"), row.names = FALSE)
 write.csv(tableS6_C, file = file.path(root_dir, "tables/tableS6-C.csv"), row.names = FALSE)
+
+# table S8 ----------------------------------------------------------------
+
+format_p <- function(x) {
+  ifelse(is.na(x), "", ifelse(x < .001, "<0.001", sprintf("%.3f", x)))
+}
+  
+make_s8 <- function(x) {
+  x %>%
+    filter(
+      exposure == "spm",
+      outcome %in% c("all", "circ", "resp"),
+      lag %in% c("0", "1", "2")
+    ) %>%
+    mutate(
+      bisection_method = factor(
+        sub("^(no2_|so2_)", "", bisection_method),
+        c("perc75", "perc80", "perc85", "abs25", "abs50", "abs75")
+      ),
+      lag = factor(lag, c("0", "1", "2")),
+      p = paste0(format_p(p_value), significance)
+    ) %>%
+    select(any_of("model"), exposure, bisection_method, lag, outcome, p) %>%
+    pivot_wider(names_from = outcome, values_from = p, names_prefix = "p_") %>%
+    arrange(across(any_of("model")), bisection_method, lag) %>%
+    rename(
+      `p-value (all-cause)` = p_all,
+      `p-value (cardiovascular)` = p_circ,
+      `p-value (respiratory)` = p_resp
+    )
+}
+
+table_s8a <- bind_rows(c(ttest_1, ttest_2)) %>% make_s8()
+
+table_s8b <- bind_rows(
+  `NO2-adjusted` = bind_rows(c(ttest_3, ttest_4)),
+  `SO2-adjusted` = bind_rows(c(ttest_5, ttest_6)),
+  .id = "model"
+) %>% make_s8()
+
+write.csv(table_s8a, paste0(root_dir, "/tables/tableS8-A.csv"),
+          row.names = FALSE, na = "")
+write.csv(table_s8b, paste0(root_dir, "/tables/tableS8-B.csv"),
+          row.names = FALSE, na = "")
+
+print(table_s8a)
+print(table_s8b)
 
 # figure S1 -------------------------------------------------------------------------------------------------------
 
@@ -1607,7 +1720,10 @@ a <- ggplot(data_seasonal, aes(x = seasonal_df, y = qaic)) +
 # Plot 2: seasonal_df vs rr with error bars (cil and ciu)
 b <- ggplot(data_seasonal, aes(x = seasonal_df, y = rr)) +
   geom_point(size = 2.5, color = "red") +
-  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  scale_y_continuous(
+    limits = c(y_lower_bound, y_upper_bound),
+    labels = function(x) formatC(x, format = "f", digits = 2)
+  ) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
@@ -1621,7 +1737,10 @@ c <- ggplot(data_temperature, aes(x = temperature_df, y = qaic)) +
 # Plot 4: temperature_df vs rr with error bars (cil and ciu)
 d <- ggplot(data_temperature, aes(x = temperature_df, y = rr)) +
   geom_point(size = 2.5, color = "red") +
-  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  scale_y_continuous(
+    limits = c(y_lower_bound, y_upper_bound),
+    labels = function(x) formatC(x, format = "f", digits = 2)
+  ) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
@@ -1670,3 +1789,4 @@ plotS6 <- plot_grid(
     dpi = 300
   )
 }
+

@@ -1,9 +1,10 @@
 #!/bin/zsh
+set -e
 
 # set constants
 seasonal_df=4
 temperature_df=4
-root_dir="/Users/kyuhur/Documents/Github/pollen_respiratory_mortality"
+root_dir="/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
 
 # make directories if they don't exist
 mkdir -p "$root_dir/plots"
@@ -22,6 +23,9 @@ Rscript src/modeling.R bisection_variation=abs75 seasonal_df=$seasonal_df temper
 
 # run sensitivity analysis
 Rscript src/sensitivity.R
+
+# run t_test
+Rscript src/t_test.R
 
 # create plots
 Rscript src/plots.R 
