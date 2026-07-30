@@ -12,17 +12,36 @@ library(magick)
 # setup -----------------------------------------------------------------------------------------------------------
 
 rm(list = ls())  # reset
-root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+os <- Sys.info()[["sysname"]]
+if ("Darwin" %in% os) {
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  sysfonts::font_add(
+    family = "Times New Roman",
+    regular = "Times New Roman.ttf",
+    bold = "Times New Roman Bold.ttf",
+    italic = "Times New Roman Italic.ttf",
+    bolditalic = "Times New Roman Bold Italic.ttf"
+  )
+  showtext::showtext_auto()
+} else {
+  root_dir <- "C:/Users/kyuhu/OneDrive/Documents/Github/pollen-respiratory-mortality"
+  font_dir <- "C:/Windows/Fonts"
+  font_files <- c(
+    regular    = file.path(font_dir, "times.ttf"),
+    bold       = file.path(font_dir, "timesbd.ttf"),
+    italic     = file.path(font_dir, "timesi.ttf"),
+    bolditalic = file.path(font_dir, "timesbi.ttf")
+  )
+  stopifnot(all(file.exists(font_files)))
+  sysfonts::font_add(
+    family = "Times New Roman",
+    regular = font_files["regular"],
+    bold = font_files["bold"],
+    italic = font_files["italic"],
+    bolditalic = font_files["bolditalic"]
+  )
+}
 source(paste0(root_dir, "/src/functions.R"))
-
-sysfonts::font_add(
-  family = "Times New Roman",
-  regular = "Times New Roman.ttf",
-  bold = "Times New Roman Bold.ttf",
-  italic = "Times New Roman Italic.ttf",
-  bolditalic = "Times New Roman Bold Italic.ttf"
-)
-showtext::showtext_auto()
 
 # main ------------------------------------------------------------------------------------------------------------
 
@@ -32,15 +51,15 @@ data_0 <- {
 }
 data_1 <- list(
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc75.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc75.csv")),
     bisection_method = "perc75"
   ),
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc80.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc80.csv")),
     bisection_method = "perc80"
   ),
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc85.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc85.csv")),
     bisection_method = "perc85"
   )
 )
@@ -894,93 +913,46 @@ write.csv(tableS6_C, file = file.path(root_dir, "tables/tableS6-C.csv"), row.nam
 # table S8 ----------------------------------------------------------------
 
 format_p <- function(x) {
-  ifelse(
-    is.na(x),
-    "",
-    ifelse(x < 0.001, "<0.001", sprintf("%.3f", x))
-  )
+  ifelse(is.na(x), "", ifelse(x < .001, "<0.001", sprintf("%.3f", x)))
 }
-
-make_s8 <- function(data, include_model = FALSE) {
-  data %>%
+  
+make_s8 <- function(x) {
+  x %>%
     filter(
       exposure == "spm",
-      outcome %in% c("all", "resp", "circ"),
+      outcome %in% c("all", "circ", "resp"),
       lag %in% c("0", "1", "2")
     ) %>%
     mutate(
-      bisection_method = sub("^(no2_|so2_)", "", bisection_method),
-      lag = factor(lag, levels = c("0", "1", "2")),
       bisection_method = factor(
-        bisection_method,
-        levels = c(
-          "perc75", "perc80", "perc85",
-          "abs25", "abs50", "abs75"
-        )
+        sub("^(no2_|so2_)", "", bisection_method),
+        c("perc75", "perc80", "perc85", "abs25", "abs50", "abs75")
       ),
-      outcome = factor(
-        outcome,
-        levels = c("all", "resp", "circ")
-      ),
-      p_value = paste0(format_p(p_value), significance)
+      lag = factor(lag, c("0", "1", "2")),
+      p = paste0(format_p(p_value), significance)
     ) %>%
-    select(
-      any_of("model"),
-      exposure,
-      lag,
-      bisection_method,
-      outcome,
-      p_value
-    ) %>%
-    pivot_wider(
-      names_from = outcome,
-      values_from = p_value,
-      names_prefix = "outcome_"
-    ) %>%
-    arrange(
-      across(any_of("model")),
-      factor(
-        grepl("^abs", bisection_method),
-        levels = c(FALSE, TRUE)
-      ),
-      lag,
-      bisection_method
-    ) %>%
+    select(any_of("model"), exposure, bisection_method, lag, outcome, p) %>%
+    pivot_wider(names_from = outcome, values_from = p, names_prefix = "p_") %>%
+    arrange(across(any_of("model")), bisection_method, lag) %>%
     rename(
-      `outcome (all)` = outcome_all,
-      `outcome (resp)` = outcome_resp,
-      `outcome (circ)` = outcome_circ
+      `p-value (all-cause)` = p_all,
+      `p-value (cardiovascular)` = p_circ,
+      `p-value (respiratory)` = p_resp
     )
 }
 
-# Table S8-A: main model
-table_s8a <- make_s8(
-  bind_rows(c(ttest_1, ttest_2))
-)
+table_s8a <- bind_rows(c(ttest_1, ttest_2)) %>% make_s8()
 
-# Table S8-B: NO2- and SO2-adjusted models
 table_s8b <- bind_rows(
-  bind_rows(c(ttest_3, ttest_4)) %>%
-    mutate(model = "NO2-adjusted"),
-  
-  bind_rows(c(ttest_5, ttest_6)) %>%
-    mutate(model = "SO2-adjusted")
-) %>%
-  make_s8(include_model = TRUE)
+  `NO2-adjusted` = bind_rows(c(ttest_3, ttest_4)),
+  `SO2-adjusted` = bind_rows(c(ttest_5, ttest_6)),
+  .id = "model"
+) %>% make_s8()
 
-write.csv(
-  table_s8a,
-  file.path(root_dir, "tables/tableS8-A.csv"),
-  row.names = FALSE,
-  na = ""
-)
-
-write.csv(
-  table_s8b,
-  file.path(root_dir, "tables/tableS8-B.csv"),
-  row.names = FALSE,
-  na = ""
-)
+write.csv(table_s8a, paste0(root_dir, "/tables/tableS8-A.csv"),
+          row.names = FALSE, na = "")
+write.csv(table_s8b, paste0(root_dir, "/tables/tableS8-B.csv"),
+          row.names = FALSE, na = "")
 
 print(table_s8a)
 print(table_s8b)
@@ -1817,3 +1789,4 @@ plotS6 <- plot_grid(
     dpi = 300
   )
 }
+

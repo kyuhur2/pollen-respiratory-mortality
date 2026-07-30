@@ -13,7 +13,12 @@ library(data.table)
 # initialize project state
 {
   rm(list = ls())
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  os <- Sys.info()[["sysname"]]
+  if ("Darwin" %in% os) {
+    root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  } else {
+    root_dir <- "C:/Users/kyuhu/OneDrive/Documents/Github/pollen-respiratory-mortality"
+  }
   source(paste0(root_dir, "/src/functions.R"))  # import functions
 }
 
@@ -304,7 +309,13 @@ library(data.table)
 
 # set params and import data
 {
-  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  os <- Sys.info()[["sysname"]]
+  if ("Darwin" %in% os) {
+    root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  } else {
+    root_dir <- "C:/Users/kyuhu/OneDrive/Documents/Github/pollen-respiratory-mortality"
+  }
+
   source(paste0(root_dir, "/src/functions.R"))
   noninteractive <- read.csv(file = paste0(root_dir, "/data/noninteractive.csv"))
   interactive_bisection <- read.csv(file = paste0(

@@ -3,7 +3,12 @@
 
 # initialize project state
 rm(list = ls())
-root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+os <- Sys.info()[["sysname"]]
+if ("Darwin" %in% os) {
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+} else {
+  root_dir <- "C:/Users/kyuhu/OneDrive/Documents/Github/pollen-respiratory-mortality"
+}
 source(paste0(root_dir, "/src/functions.R")) # import functions
 
 # import data
@@ -102,7 +107,7 @@ columns_to_keep <- c(
   paste0(SUHI, "2"),
   paste0(SUHI, "3"),
   paste0(SUHI, "4"),
-  paste0(SUHI, "5")
+  paste0(SUHI, "5"),
   paste0(SUHI, "6"),
   paste0(SUHI, "7")
 )
@@ -185,10 +190,14 @@ columns_to_rename <- c(
   pol_2 = paste0(SUHI, "2"),
   pol_3 = paste0(SUHI, "3"),
   pol_4 = paste0(SUHI, "4"),
-  pol_5 = paste0(SUHI, "5")
+  pol_5 = paste0(SUHI, "5"),
   pol_6 = paste0(SUHI, "6"),
   pol_7 = paste0(SUHI, "7")
 )
+
+missing_columns <- setdiff(columns_to_keep, names(lagdata))
+if (length(missing_columns) > 0) { stop("Missing columns: ", paste(missing_columns, collapse = ", ")) }
+
 data <- lagdata %>%
   dplyr::select(all_of(columns_to_keep)) %>%
   dplyr::rename(!!!columns_to_rename)
