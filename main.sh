@@ -27,6 +27,13 @@ Rscript src/sensitivity.R
 # run t_test
 Rscript src/t_test.R
 
+# create Figure S2 (vegetation map); needs the raw GIS data, which is not in git
+if [ -f "$root_dir/vegetation-plot/vegetation-data/veg2024bk8a.gpkg" ]; then
+  Rscript vegetation-plot/vegetation-plot-only-suhi.R
+else
+  echo "WARNING: vegetation-plot/vegetation-data/ not found; skipping Figure S2 map" >&2
+fi
+
 # create plots
-Rscript src/plots.R 
+Rscript src/plots.R
 

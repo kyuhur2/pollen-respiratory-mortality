@@ -624,15 +624,24 @@ p <- ggplot() +
 
 graphics.off()
 
+vegetation_map_pdf <- file.path(
+  fig_dir,
+  paste0("vegetation-map-2024-", SUHI_RES, "-", OTHER_VEG_RES, "-res.pdf")
+)
+
 ggsave(
-  filename = file.path(
-    fig_dir,
-    paste0("vegetation-map-2024-", SUHI_RES, "-", OTHER_VEG_RES, "-res.pdf")
-  ),
+  filename = vegetation_map_pdf,
   plot = p,
   width = 8.2,
   height = 7,
   units = "in",
   bg = "white",
   limitsize = FALSE
+)
+
+# This map is Figure S2 in the manuscript; src/plots.R adds the captioned version.
+file.copy(
+  vegetation_map_pdf,
+  file.path(dirname(root_dir), "plots", "figureS2_nocaption.pdf"),
+  overwrite = TRUE
 )

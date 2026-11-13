@@ -70,14 +70,21 @@ All analyses are done independently in eight different Kyushu cities. Data from 
 
 ## Plots
 
-The following figures are included in this project:
+Figure numbers match the 2026-08-03 revision of the manuscript. Each figure is written to `/plots` twice: `figureX_nocaption.pdf` (the file submitted to the journal) and `figureX.pdf` (same figure with its caption, for review).
 
-- **Figure 1:** Study area map (cities) and pollen clinic / air pollution stations
-- **Figure 2:** Single model (noninteractive), `SPM` on mortality + mortality ages ≥65 
-- **Figure 3:** Interactive model, `SPM`:`pollen` on mortality
-- **Figure S1:** Interactive model, `SPM`:`pollen` on mortality ages ≥65
-- **Figure S2:** Interactive + confounding model, `NO2` as confounder
-- **Figure S3:** Interactive + confounding model, `SO2` as confounder
+| Figure | Content | Produced by |
+|---|---|---|
+| **Figure 1** | Study area map (cities) and pollen sampling points / air pollution stations | static map [`assets/figure1-study-map.pdf`](/assets/README.md), captioned by `plots.R` |
+| **Figure 2** | Single model (noninteractive), `SPM` on mortality | `plots.R` |
+| **Figure 3** | Interactive model, `SPM`:`pollen` on mortality | `plots.R` |
+| **Figure S1** | Map of Japan with the Kyushu prefectures highlighted | static map [`assets/figureS1-japan-map.pdf`](/assets/README.md), captioned by `plots.R` |
+| **Figure S2** | Sugi–hinoki and other vegetation in Kyushu (2024 vegetation data, 25 m tolerance) | [`vegetation-plot/vegetation-plot-only-suhi.R`](/vegetation-plot/vegetation-plot-only-suhi.R), captioned by `plots.R` |
+| **Figure S3** | Single model, `SPM` on mortality ages ≥65 | `plots.R` |
+| **Figure S4** | Interactive model, `SPM`:`pollen` on mortality ages ≥65 | `plots.R` |
+| **Figure S5** | Interactive model with non-imputed pollen data | **not yet in this repo** (see TODO in `plots.R`) |
+| **Figure S6** | qAIC / RR sensitivity to spline degrees of freedom | `plots.R` |
+| **Figure S7** | Interactive + confounding model, `NO2` as confounder | `plots.R` |
+| **Figure S8** | Interactive + confounding model, `SO2` as confounder | `plots.R` |
 
 Code for Figure 1 was moved to [`misc.R`](/src/misc.R) because the library utilized to create part of the map tries to fetch data from a dead link.
 

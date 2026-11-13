@@ -112,6 +112,14 @@ try {
     # Run t-test
     Invoke-RScript -Script "src/t_test.R"
 
+    # Create Figure S2 (vegetation map); needs the raw GIS data, which is not in git
+    if (Test-Path (Join-Path $rootDir "vegetation-plot/vegetation-data/veg2024bk8a.gpkg")) {
+        Invoke-RScript -Script "vegetation-plot/vegetation-plot-only-suhi.R"
+    }
+    else {
+        Write-Warning "vegetation-plot/vegetation-data/ not found; skipping Figure S2 map"
+    }
+
     # Create plots
     Invoke-RScript -Script "src/plots.R"
 

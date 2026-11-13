@@ -315,7 +315,7 @@ write.csv(noninteractive,
   
   # Save as PDF instead of TIFF
   pdf(
-    paste0(root_dir, "/plots/study_map.pdf"),
+    paste0(root_dir, "/assets/figure1-study-map.pdf"),  # used by src/plots.R for Figure 1
     width = 10.67,  # Width in inches
     height = 6.00   # Height in inches
   )
