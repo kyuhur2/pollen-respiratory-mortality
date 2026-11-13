@@ -7,3 +7,10 @@ data-misc/*.csv
 data/
 data-misc/
 .positai
+tmp/
+
+plots-old/
+
+# raw GIS inputs (too large for GitHub; see vegetation-plot/ scripts for sources)
+vegetation-plot/vegetation-data/
+vegetation-plot/kyushu-data/

@@ -1,0 +1,6 @@
+year,n_years,n_prefectures,average_total_land_area_ha,average_forest_area_ha,average_planted_forest_area_ha,forest_coverage_pct,planted_forest_share_of_forest_pct,planted_forest_share_of_total_land_pct
+2007,NA,7,4217809,2674023,1500994,63.4,56.1,35.6
+2012,NA,7,4219297,2666905,1483336,63.2,55.6,35.2
+2017,NA,7,4223176,2664690,1443807,63.1,54.2,34.2
+2020,NA,7,4223002,2666809,1422704,63.1,53.3,33.7
+Average 2007-2020,4,NA,4220821,2668107,1462710,63.2,54.8,34.7
