@@ -876,46 +876,92 @@ create_noninteractive_plot <- function(exposure,
                                        y_upper_bound,
                                        point_color,
                                        point_shape,
-                                       debug) {
-  # subset data
-  data <- data[data["exposure"] == exposure &
-                 data["outcome"] == outcome & data$lag %in% lags, ]
-  data$facet_group <- ifelse(data$lag %in% c("0", "1", "2", "3", "4", "5"),
-                             "Lags",
-                             "Moving Averages")
-  data$lag <- recode(
-    data$lag,
+                                       debug = FALSE) {
+  # Subset data
+  data <- data[
+    data$exposure == exposure &
+      data$outcome == outcome &
+      data$lag %in% lags,
+  ]
+  
+  data$facet_group <- ifelse(
+    data$lag %in% c("0", "1", "2", "3", "4", "5"),
+    "Lags",
+    "Moving Averages"
+  )
+  
+  data$lag <- dplyr::recode(
+    as.character(data$lag),
     "ma1" = "0-1",
     "ma2" = "0-2",
     "ma3" = "0-3",
     "ma4" = "0-4",
     "ma5" = "0-5"
   )
-  data$lag <- factor(data$lag,
-                     levels = c("0", "1", "2", "3", "4", "5", "0-1", "0-2", "0-3", "0-4", "0-5"))
-
-  # plot
-  x <- ggplot(data, aes(x = lag, y = rr)) +
-    geom_errorbar(aes(ymin = cil, ymax = ciu),
-                  color = "black",
-                  width = 0.4) +
-    geom_hline(yintercept = 1.0,
-               linetype = "dotted",
-               color = "black") +
-    geom_point(size = 2.5,
-               color = point_color,
-               shape = point_shape) +
-    labs(x = NULL, y = "RR", title = " ") +
-    theme_classic() +
-    theme(
-      strip.background = element_blank(),
-      strip.text = element_text(face = "bold"),
-      strip.placement = "outside",          # place strips outside panels
-      plot.margin = margin(5.5, 5.5, 12, 5.5)  # give a bit more bottom space
+  
+  data$lag <- factor(
+    data$lag,
+    levels = c(
+      "0", "1", "2", "3", "4", "5",
+      "0-1", "0-2", "0-3", "0-4", "0-5"
+    )
+  )
+  
+  # Round plot limits to avoid floating-point display artifacts
+  y_lower_plot <- floor(y_lower_bound * 100) / 100
+  y_upper_plot <- ceiling(y_upper_bound * 100) / 100
+  
+  # Plot
+  x <- ggplot2::ggplot(
+    data,
+    ggplot2::aes(x = lag, y = rr)
+  ) +
+    ggplot2::geom_errorbar(
+      ggplot2::aes(ymin = cil, ymax = ciu),
+      color = "black",
+      width = 0.4
     ) +
-    scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
-                       labels = scales::label_number(accuracy = 0.01)) +
-    facet_grid(~ facet_group, scales = "free_x", space = "free", switch = "x")
+    ggplot2::geom_hline(
+      yintercept = 1,
+      linetype = "dotted",
+      color = "black"
+    ) +
+    ggplot2::geom_point(
+      size = 2.5,
+      color = point_color,
+      shape = point_shape
+    ) +
+    ggplot2::labs(
+      x = NULL,
+      y = "RR",
+      title = " "
+    ) +
+    ggplot2::theme_classic() +
+    ggplot2::theme(
+      strip.background = ggplot2::element_blank(),
+      strip.text = ggplot2::element_text(face = "bold"),
+      strip.placement = "outside",
+      plot.margin = ggplot2::margin(5.5, 5.5, 12, 5.5)
+    ) +
+    ggplot2::scale_y_continuous(
+      limits = c(y_lower_plot, y_upper_plot),
+      breaks = function(limits) {
+        pretty(limits, n = 4)
+      },
+      labels = function(x) {
+        formatC(
+          x,
+          format = "f",
+          digits = 2
+        )
+      }
+    ) +
+    ggplot2::facet_grid(
+      ~ facet_group,
+      scales = "free_x",
+      space = "free",
+      switch = "x"
+    )
   
   return(x)
 }
@@ -930,40 +976,81 @@ create_interactive_plot <- function(exposure,
                                     point_shapes,
                                     point_colors,
                                     legend_label,
-                                    debug) {
-  # params
-  levels <- c("Low L0", "High L0", "Low L1", "High L1", "Low L2", "High L2")
+                                    debug = FALSE) {
   
-  # construct dataframe with the 4 cutoffs
-  data_frames <- list()
-  for (i in seq(length(data))) {
+  facet_levels <- c(
+    "Low L0", "High L0",
+    "Low L1", "High L1",
+    "Low L2", "High L2"
+  )
+  
+  # Combine cutoff-specific dataframes
+  data_frames <- vector("list", length(data))
+  
+  for (i in seq_along(data)) {
     tmp <- data[[i]]
-    tmp <- tmp[tmp["exposure"] == exposure &
-                 tmp["outcome"] == outcome & tmp$lag %in% lags, ]
+    
+    tmp <- tmp[
+      tmp$exposure == exposure &
+        tmp$outcome == outcome &
+        tmp$lag %in% lags,
+    ]
+    
     tmp$cutoffs <- cutoffs_vec[i]
-    data_frames <- append(data_frames, list(tmp))
+    data_frames[[i]] <- tmp
   }
-  data <- do.call(rbind, data_frames) # collapse into one dataframe
   
-  # create the levels for x_axis without spaces
-  x_axis_levels <- paste0(rep(cutoffs_vec, times = length(levels)),
-                          "Q",
-                          rep(rep(1:2, each = 3), times = 3),
-                          "L",
-                          rep(0:2, each = 6))
-  if (debug) { debug(paste("x_axis_levels:", x_axis_levels)) }
-
-  # mutate combination of cutoffs * quantile * lags
-  if (debug) { debug(paste("cutoffs * quantile * lags:", data$cutoffs, "Q", data$quantile, "L", data$lag)) }
+  data <- dplyr::bind_rows(data_frames)
+  
+  # Add significance labels
+  if ("p_value" %in% names(data)) {
+    data <- data %>%
+      dplyr::mutate(
+        significance = dplyr::case_when(
+          p_value < 0.05 ~ "**",
+          p_value < 0.10 ~ "*",
+          TRUE ~ ""
+        )
+      )
+  } else {
+    data$significance <- ""
+  }
+  
+  # Define x-axis order
+  x_axis_levels <- paste0(
+    rep(cutoffs_vec, times = length(facet_levels)),
+    "Q",
+    rep(
+      rep(1:2, each = length(cutoffs_vec)),
+      times = length(lags)
+    ),
+    "L",
+    rep(
+      lags,
+      each = length(cutoffs_vec) * 2
+    )
+  )
+  
+  if (debug) {
+    message(
+      "x_axis_levels: ",
+      paste(x_axis_levels, collapse = ", ")
+    )
+  }
+  
   data <- data %>%
-    arrange(lag, quantile, cutoffs) %>%
-    mutate(x_axis = factor(paste0(cutoffs, "Q", quantile, "L", lag), levels = x_axis_levels))
+    dplyr::arrange(lag, quantile, cutoffs) %>%
+    dplyr::mutate(
+      x_axis = factor(
+        paste0(cutoffs, "Q", quantile, "L", lag),
+        levels = x_axis_levels
+      ),
+      group = factor(
+        rep(facet_levels, each = length(cutoffs_vec)),
+        levels = facet_levels
+      )
+    )
   
-  # create grouping variable that groups every 3 elements together
-  if (debug) { debug(paste("levels:", levels)) }
-  data$group <- factor(rep(levels, each = length(cutoffs_vec)), levels = levels)
-  
-  # labellers for facet()
   group_labeller <- ggplot2::as_labeller(c(
     "Low L0"  = "<b>Low</b>",
     "High L0" = "<b>High</b>",
@@ -973,59 +1060,145 @@ create_interactive_plot <- function(exposure,
     "High L2" = "<b>High</b>"
   ))
   
-  # plot using facet_wrap to create side-by-side plots
-  x <- ggplot(data,
-              aes(
-                x = x_axis,
-                y = rr,
-                shape = as.factor(cutoffs),
-                color = as.factor(cutoffs)
-              )) +
-    geom_errorbar(aes(ymin = cil, ymax = ciu),
-                  color = "black",
-                  width = 0.75) +
-    geom_hline(yintercept = 1.0,
-               linetype = "dotted",
-               color = "black") +
-    geom_point(size = 2.5) +
-    labs(
+  # Position stars slightly above confidence intervals
+  y_range <- y_upper_bound - y_lower_bound
+  star_offset <- 0.015 * y_range
+  
+  significance_data <- data %>%
+    dplyr::filter(
+      as.character(quantile) == "2",
+      !is.na(significance),
+      significance != ""
+    ) %>%
+    dplyr::mutate(
+      star_y = ciu + star_offset
+    )
+  
+  # Ensure enough room above the highest CI/star
+  max_required_y <- max(
+    c(
+      data$ciu,
+      significance_data$star_y
+    ),
+    na.rm = TRUE
+  )
+  
+  y_lower_plot <- floor(y_lower_bound * 100) / 100
+  y_upper_plot <- ceiling(
+    max(
+      y_upper_bound + 0.05 * y_range,
+      max_required_y
+    ) * 100
+  ) / 100
+  
+  x <- ggplot2::ggplot(
+    data,
+    ggplot2::aes(
+      x = x_axis,
+      y = rr,
+      shape = as.factor(cutoffs),
+      color = as.factor(cutoffs)
+    )
+  ) +
+    ggplot2::geom_errorbar(
+      ggplot2::aes(
+        ymin = cil,
+        ymax = ciu
+      ),
+      color = "black",
+      width = 0.75
+    ) +
+    ggplot2::geom_hline(
+      yintercept = 1,
+      linetype = "dotted",
+      color = "black"
+    ) +
+    ggplot2::geom_point(
+      size = 2.5
+    ) +
+    ggplot2::geom_text(
+      data = significance_data,
+      ggplot2::aes(
+        x = x_axis,
+        y = star_y,
+        label = significance
+      ),
+      inherit.aes = FALSE,
+      size = 4,
+      fontface = "bold",
+      vjust = 0
+    ) +
+    ggplot2::labs(
       x = NULL,
       y = "RR",
       title = " ",
       shape = legend_label,
       color = legend_label
     ) +
-    theme_classic() +
-    theme(
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      panel.spacing = unit(0.5, "lines"),
-      legend.margin = margin(0, 0, 0, 0),
-      legend.box.margin = margin(-5, 5, -5, -5),
-      legend.title = element_text(size = 10, face = "bold"),
-      strip.text = element_markdown(),
-      plot.margin = margin(5.5, 5.5, 16, 5.5)
+    ggplot2::theme_classic() +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      axis.ticks.x = ggplot2::element_blank(),
+      panel.spacing = grid::unit(0.5, "lines"),
+      legend.margin = ggplot2::margin(0, 0, 0, 0),
+      legend.box.margin = ggplot2::margin(-5, 5, -5, -5),
+      legend.title = ggplot2::element_text(
+        size = 10,
+        face = "bold"
+      ),
+      strip.text = ggtext::element_markdown(),
+      plot.margin = ggplot2::margin(
+        5.5,
+        5.5,
+        16,
+        5.5
+      )
     ) +
-    scale_y_continuous(limits = c(y_lower_bound, y_upper_bound),
-                       labels = label_number(accuracy = 0.01)) +
-    facet_wrap(~ group,
-               scales = "free_x",
-               nrow = 1,
-               labeller = group_labeller) +
-    scale_shape_manual(values = point_shapes) +
-    scale_color_manual(values = point_colors)
+    ggplot2::scale_y_continuous(
+      limits = c(
+        y_lower_plot,
+        y_upper_plot
+      ),
+      breaks = function(limits) {
+        pretty(limits, n = 4)
+      },
+      labels = function(x) {
+        formatC(
+          x,
+          format = "f",
+          digits = 2
+        )
+      }
+    ) +
+    ggplot2::facet_wrap(
+      ~ group,
+      scales = "free_x",
+      nrow = 1,
+      labeller = group_labeller
+    ) +
+    ggplot2::scale_shape_manual(
+      values = point_shapes
+    ) +
+    ggplot2::scale_color_manual(
+      values = point_colors
+    )
   
-  # add one centered "Lag 0 / Lag 1 / Lag 2" under each Low–High pair
-  n_pairs <- length(lags) # e.g., 3
+  # Add centered Lag labels below each Low–High pair
   xs <- c(0.23, 0.48, 0.73)
   lag_labels <- paste0("Lag ", lags)
   
   xg <- cowplot::ggdraw(x)
+  
   for (i in seq_along(xs)) {
-    xg <- xg + cowplot::draw_label(
-      lag_labels[i],
-      x = xs[i], y = 0.02, vjust = 0, fontface = "bold", size = 10
-    )
+    xg <- xg +
+      cowplot::draw_label(
+        lag_labels[i],
+        x = xs[i],
+        y = 0.02,
+        vjust = 0,
+        fontface = "bold",
+        size = 10
+      )
   }
   
   return(xg)

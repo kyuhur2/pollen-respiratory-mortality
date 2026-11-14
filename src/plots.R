@@ -12,17 +12,36 @@ library(magick)
 # setup -----------------------------------------------------------------------------------------------------------
 
 rm(list = ls())  # reset
-root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+os <- Sys.info()[["sysname"]]
+if ("Darwin" %in% os) {
+  root_dir <- "/Users/kyuhur/Documents/Github/pollen-respiratory-mortality"
+  sysfonts::font_add(
+    family = "Times New Roman",
+    regular = "Times New Roman.ttf",
+    bold = "Times New Roman Bold.ttf",
+    italic = "Times New Roman Italic.ttf",
+    bolditalic = "Times New Roman Bold Italic.ttf"
+  )
+  showtext::showtext_auto()
+} else {
+  root_dir <- "C:/Users/kyuhu/OneDrive/Documents/Github/pollen-respiratory-mortality"
+  font_dir <- "C:/Windows/Fonts"
+  font_files <- c(
+    regular    = file.path(font_dir, "times.ttf"),
+    bold       = file.path(font_dir, "timesbd.ttf"),
+    italic     = file.path(font_dir, "timesi.ttf"),
+    bolditalic = file.path(font_dir, "timesbi.ttf")
+  )
+  stopifnot(all(file.exists(font_files)))
+  sysfonts::font_add(
+    family = "Times New Roman",
+    regular = font_files["regular"],
+    bold = font_files["bold"],
+    italic = font_files["italic"],
+    bolditalic = font_files["bolditalic"]
+  )
+}
 source(paste0(root_dir, "/src/functions.R"))
-
-sysfonts::font_add(
-  family = "Times New Roman",
-  regular = "Times New Roman.ttf",
-  bold = "Times New Roman Bold.ttf",
-  italic = "Times New Roman Italic.ttf",
-  bolditalic = "Times New Roman Bold Italic.ttf"
-)
-showtext::showtext_auto()
 
 # main ------------------------------------------------------------------------------------------------------------
 
@@ -32,15 +51,15 @@ data_0 <- {
 }
 data_1 <- list(
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc75.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc75.csv")),
     bisection_method = "perc75"
   ),
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc80.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc80.csv")),
     bisection_method = "perc80"
   ),
   transform(
-    read.csv(file.path(root_dir, "data/metafor_bisection_perc85.csv")),
+    read.csv(file.path(root_dir, "/data/metafor_bisection_perc85.csv")),
     bisection_method = "perc85"
   )
 )
@@ -118,6 +137,53 @@ data_6 <- {
 # sensitivity analysis
 data_7 <- read.csv(file = paste0(root_dir, "/data/noninteractive_aggregated.csv"))
 
+# attach t-test data
+read_ttest <- function(suffix) {
+  read.csv(file.path(root_dir, "data", paste0("t-test__", suffix, ".csv"))) %>%
+    mutate(
+      lag = as.character(lag),
+      bisection_method = suffix,
+      significance = case_when(
+        p_value < 0.05 ~ "**",
+        p_value < 0.10 ~ "*",
+        TRUE ~ ""
+      )
+    ) %>%
+    select(exposure, outcome, lag, bisection_method, p_value, significance)
+}
+
+ttest_1 <- lapply(c("perc75", "perc80", "perc85"), read_ttest)
+ttest_2 <- lapply(c("abs25", "abs50", "abs75"), read_ttest)
+ttest_3 <- lapply(c("no2_perc75", "no2_perc80", "no2_perc85"), read_ttest)
+ttest_4 <- lapply(c("no2_abs25", "no2_abs50", "no2_abs75"), read_ttest)
+ttest_5 <- lapply(c("so2_perc75", "so2_perc80", "so2_perc85"), read_ttest)
+ttest_6 <- lapply(c("so2_abs25", "so2_abs50", "so2_abs75"), read_ttest)
+
+attach_ttest <- function(model_list, ttest_list) {
+  Map(
+    function(model_data, test_data) {
+      model_data %>%
+        mutate(
+          lag = as.character(lag),
+          bisection_method = unique(test_data$bisection_method)
+        ) %>%
+        left_join(
+          test_data,
+          by = c("exposure", "outcome", "lag", "bisection_method")
+        )
+    },
+    model_list,
+    ttest_list
+  )
+}
+
+data_1 <- attach_ttest(data_1, ttest_1)
+data_2 <- attach_ttest(data_2, ttest_2)
+data_3 <- attach_ttest(data_3, ttest_3)
+data_4 <- attach_ttest(data_4, ttest_4)
+data_5 <- attach_ttest(data_5, ttest_5)
+data_6 <- attach_ttest(data_6, ttest_6)
+
 # params
 CITIES <- c(
   "Fukuoka",
@@ -130,48 +196,61 @@ CITIES <- c(
   "Saga"
 )
 
+# static / externally generated figures ---------------------------------------------------------------------------
+
+# Copies `source_pdf` to plots/<figure_name>_nocaption.pdf (the file submitted to the journal) and writes
+# plots/<figure_name>.pdf with the caption underneath, sized to the source page's aspect ratio.
+save_static_figure <- function(source_pdf, figure_name, caption_text, width = 10, caption_height = 0.8) {
+  if (!file.exists(source_pdf)) {
+    stop("Source figure not found: ", source_pdf)
+  }
+  nocaption_pdf <- file.path(root_dir, "plots", paste0(figure_name, "_nocaption.pdf"))
+  if (normalizePath(source_pdf) != normalizePath(nocaption_pdf, mustWork = FALSE)) {
+    file.copy(source_pdf, nocaption_pdf, overwrite = TRUE)
+  }
+
+  image <- magick::image_read_pdf(source_pdf, density = 300)[1]
+  info <- magick::image_info(image)
+  image_height <- width * info$height / info$width
+
+  caption_grob <- gridtext::textbox_grob(
+    caption_text,
+    x = 0.5, y = 0.5,
+    halign = 0, valign = 0.5,
+    width = grid::unit(1, "npc"),
+    gp = grid::gpar(
+      fontfamily = "Times New Roman",
+      fontsize = 11
+    ),
+    box_gp = grid::gpar(col = NA, fill = NA),
+    margin = grid::unit(c(0, 6, 0, 6), "pt")
+  )
+  plot <- cowplot::plot_grid(
+    cowplot::ggdraw() + cowplot::draw_image(image, x = 0, y = 0, width = 1, height = 1),
+    caption_grob,
+    ncol = 1,
+    rel_heights = c(image_height, caption_height)
+  )
+  ggsave(
+    filename = file.path(root_dir, "plots", paste0(figure_name, ".pdf")),
+    plot = plot,
+    device = "pdf",
+    width = width,
+    height = image_height + caption_height,
+    units = "in",
+    dpi = 300
+  )
+}
+
 # figure 1 --------------------------------------------------------------------------------------------------------
 
-# params
-caption_text = paste0(
-  "**Figure 1.** Map of cities (left) and location of pollen clinics and air pollution stations (right)."
-)
-caption_grob <- gridtext::textbox_grob(
-  caption_text,
-  x = 0.5, y = 0.5,
-  halign = 0, valign = 0.5,
-  width = grid::unit(1, "npc"),
-  gp = grid::gpar(
-    fontfamily = "Times New Roman",
-    fontsize = 11
-  ),
-  box_gp = grid::gpar(col = NA, fill = NA),
-  margin = grid::unit(c(0, 6, 0, 6), "pt")
-)
-
-# import figure 1 
-plot1 <- cowplot::ggdraw() +
-  cowplot::draw_image(
-    magick::image_read_pdf(paste0(root_dir, "/plots/figure1-pre.pdf"), density = 300)[1],
-    x = 0,
-    y = 0,
-    width = 1,
-    height = 1
+# static study map (originally drawn by src/misc.R; see assets/README.md)
+save_static_figure(
+  source_pdf = file.path(root_dir, "assets", "figure1-study-map.pdf"),
+  figure_name = "figure1",
+  caption_text = paste0(
+    "**Figure 1.** Map of cities (left) and location of pollen sampling points and air pollution stations (right)."
   )
-plot1 <- cowplot::plot_grid(
-  plot1,
-  caption_grob,
-  ncol = 1,
-  rel_heights = c(1, 0.10)
-)
-ggsave(
-  filename = paste0(root_dir, "/plots/figure1.pdf"),
-  plot = plot1,
-  device = "pdf",
-  width = 10,
-  height = 6.5,
-  units = "in",
-  dpi = 300
 )
 
 # figure 2 --------------------------------------------------------------------------------------------------------
@@ -544,7 +623,7 @@ write.csv(table1, file = file.path(root_dir, "tables/table1.csv"), row.names = F
 
 # table 2 ---------------------------------------------------------------------------------------------------------
 
-tmp <- read.csv(paste0(root_dir, "/data/fdata.csv"))
+tmp <- read.csv(paste0(root_dir, "/data/lagdata.csv"))
 
 tmp <- tmp %>%
   filter(city %in% CITIES, month %in% c(2, 3, 4)) %>%
@@ -600,9 +679,9 @@ make_row_percentile <- function(data, var, p, exposure_label, stat_label_prefix)
 
 # build table
 table2 <- bind_rows(
-  make_row_mean_sd(tmp, SPM, "SPM (μg/m3)", "Mean ± SD"),
-  make_row_median_iqr(tmp, SPM, "SPM (μg/m3)", "Median, IQR"),
-  make_row_max(tmp, SPM, "SPM (μg/m3)", "Max"),
+  make_row_mean_sd(tmp, SPMout, "SPM (μg/m3)", "Mean ± SD"),
+  make_row_median_iqr(tmp, SPMout, "SPM (μg/m3)", "Median, IQR"),
+  make_row_max(tmp, SPMout, "SPM (μg/m3)", "Max"),
   make_row_mean_sd(tmp, SuHi, "Pollen count", "Mean ± SD"),
   make_row_median_iqr(tmp, SuHi, "Pollen count", "Median, IQR"),
   make_row_percentile(tmp, SuHi, 0.75, "Pollen count", "75"),
@@ -844,51 +923,84 @@ write.csv(tableS6_A, file = file.path(root_dir, "tables/tableS6-A.csv"), row.nam
 write.csv(tableS6_B, file = file.path(root_dir, "tables/tableS6-B.csv"), row.names = FALSE)
 write.csv(tableS6_C, file = file.path(root_dir, "tables/tableS6-C.csv"), row.names = FALSE)
 
+# table S8 ----------------------------------------------------------------
+
+format_p <- function(x) {
+  ifelse(is.na(x), "", ifelse(x < .001, "<0.001", sprintf("%.3f", x)))
+}
+  
+make_s8 <- function(x) {
+  x %>%
+    filter(
+      exposure == "spm",
+      outcome %in% c("all", "circ", "resp"),
+      lag %in% c("0", "1", "2")
+    ) %>%
+    mutate(
+      bisection_method = factor(
+        sub("^(no2_|so2_)", "", bisection_method),
+        c("perc75", "perc80", "perc85", "abs25", "abs50", "abs75")
+      ),
+      lag = factor(lag, c("0", "1", "2")),
+      p = paste0(format_p(p_value), significance)
+    ) %>%
+    select(any_of("model"), exposure, bisection_method, lag, outcome, p) %>%
+    pivot_wider(names_from = outcome, values_from = p, names_prefix = "p_") %>%
+    arrange(across(any_of("model")), bisection_method, lag) %>%
+    rename(
+      `p-value (all-cause)` = p_all,
+      `p-value (cardiovascular)` = p_circ,
+      `p-value (respiratory)` = p_resp
+    )
+}
+
+table_s8a <- bind_rows(c(ttest_1, ttest_2)) %>% make_s8()
+
+table_s8b <- bind_rows(
+  `NO2-adjusted` = bind_rows(c(ttest_3, ttest_4)),
+  `SO2-adjusted` = bind_rows(c(ttest_5, ttest_6)),
+  .id = "model"
+) %>% make_s8()
+
+write.csv(table_s8a, paste0(root_dir, "/tables/tableS8-A.csv"),
+          row.names = FALSE, na = "")
+write.csv(table_s8b, paste0(root_dir, "/tables/tableS8-B.csv"),
+          row.names = FALSE, na = "")
+
+print(table_s8a)
+print(table_s8b)
+
 # figure S1 -------------------------------------------------------------------------------------------------------
 
-# params
-caption_text = paste0(
-  "**Figure 1.** Map of cities (left) and location of pollen clinics and air pollution stations (right)."
-)
-caption_grob <- gridtext::textbox_grob(
-  caption_text,
-  x = 0.5, y = 0.5,
-  halign = 0, valign = 0.5,
-  width = grid::unit(1, "npc"),
-  gp = grid::gpar(
-    fontfamily = "Times New Roman",
-    fontsize = 11
-  ),
-  box_gp = grid::gpar(col = NA, fill = NA),
-  margin = grid::unit(c(0, 6, 0, 6), "pt")
-)
-
-# import figure S1 
-plotS1 <- cowplot::ggdraw() +
-  cowplot::draw_image(
-    magick::image_read_pdf(paste0(root_dir, "/plots/figure1.pdf"), density = 300)[1],
-    x = 0,
-    y = 0,
-    width = 1,
-    height = 1
+# static map of Japan / Kyushu (not generated by code; see assets/README.md)
+save_static_figure(
+  source_pdf = file.path(root_dir, "assets", "figureS1-japan-map.pdf"),
+  figure_name = "figureS1",
+  caption_text = paste0(
+    "**Figure S1.** Map of Japan with seven of eight Kyushu prefectures highlighted. Two cities (Fukuoka and",
+    " Kitakyushu city) from Fukuoka prefecture were included in this study whereas only one city was included from",
+    " each of the remaining prefectures (excluding Okinawa prefecture)."
   )
-plot1 <- cowplot::plot_grid(
-  plot1,
-  caption_grob,
-  ncol = 1,
-  rel_heights = c(1, 0.10)
-)
-ggsave(
-  filename = paste0(root_dir, "/plots/figure1.pdf"),
-  plot = plot1,
-  device = "pdf",
-  width = 10,
-  height = 6.5,
-  units = "in",
-  dpi = 300
 )
 
 # figure S2 -------------------------------------------------------------------------------------------------------
+
+# vegetation map; plots/figureS2_nocaption.pdf is written by vegetation-plot/vegetation-plot-only-suhi.R
+figure_s2_source <- file.path(root_dir, "plots", "figureS2_nocaption.pdf")
+if (file.exists(figure_s2_source)) {
+  save_static_figure(
+    source_pdf = figure_s2_source,
+    figure_name = "figureS2",
+    caption_text = paste0(
+      "**Figure S2.** Distribution of mapped sugi–hinoki vegetation and other vegetation classes in Kyushu, Japan.",
+      " Polygon geometries were simplified using 25-meter tolerances then projected for plotting."
+    )
+  )
+} else {
+  warning("Skipping Figure S2: run vegetation-plot/vegetation-plot-only-suhi.R first to create ", figure_s2_source)
+}
+
+# figure S3 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- data_0[data_0$exposure %in% c("spm") &
@@ -899,7 +1011,7 @@ y_upper_bound <- max(tmp$ciu, na.rm = TRUE)
 point_color = "red"
 point_shape = 18
 caption_text <- paste0(
-  "**Figure S2.** Association between SPM and all-cause, respiratory and cardiovascular mortality of ages 65 and above",
+  "**Figure S3.** Association between SPM and all-cause, respiratory and cardiovascular mortality of ages 65 and above",
   " by levels of pollen cutoffs (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50, 75 grains per",
   " cm<sup>2</sup>) during the spring months (February to April) from 1989 to 2014. RR on the y-axis is defined as the",
   " relative risk per interquartile range mean (IQRM) increase. Results are pooled from random-effects meta-analysis."
@@ -983,7 +1095,7 @@ plotS2 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS2_nocaption.pdf"),
+    filename = paste0(root_dir, "/plots/figureS3_nocaption.pdf"),
     plot = plotS2,
     device = "pdf",
     width = 10,
@@ -1001,7 +1113,7 @@ plotS2 <- plot_grid(
 )
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS2.pdf"),
+    filename = paste0(root_dir, "/plots/figureS3.pdf"),
     plot = plotS2,
     device = "pdf",
     width = 10,
@@ -1011,7 +1123,7 @@ plotS2 <- plot_grid(
   )
 }
 
-# figure S3 -------------------------------------------------------------------------------------------------------
+# figure S4 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- do.call(rbind, c(data_1, data_2))
@@ -1024,7 +1136,7 @@ cutoffs_vec_perc <- c(75, 80, 85)
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
 caption_text <- paste0(
-  "**Figure S3.** Association between SPM and all-cause, respiratory and cardiovascular mortality of ages 65 and above",
+  "**Figure S4.** Association between SPM and all-cause, respiratory and cardiovascular mortality of ages 65 and above",
   " by quantiles (low or high) determined by levels of pollen cutoffs (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>)",
   " and count (25, 50, 75 grains per cm<sup>2</sup>) during the spring months (February to April) from 1989 to 2014.",
   " RR on the y-axis is defined as the relative risk per interquartile range mean (IQRM) increase. Results are pooled",
@@ -1158,7 +1270,7 @@ plotS3 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS3_nocaption.pdf"),
+    filename = paste0(root_dir, "/plots/figureS4_nocaption.pdf"),
     plot = plotS3,
     device = "pdf",
     width = 10,
@@ -1176,7 +1288,7 @@ plotS3 <- plot_grid(
 )
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS3.pdf"),
+    filename = paste0(root_dir, "/plots/figureS4.pdf"),
     plot = plotS3,
     device = "pdf",
     width = 10,
@@ -1186,7 +1298,7 @@ plotS3 <- plot_grid(
   )
 }
 
-# figure S4 -------------------------------------------------------------------------------------------------------
+# figure S7 -------------------------------------------------------------------------------------------------------
 
 tmp <- do.call(rbind, c(data_3, data_4))
 tmp <- tmp[tmp$exposure %in% c("spm") &
@@ -1198,7 +1310,7 @@ cutoffs_vec_perc <- c(75, 80, 85)
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
 caption_text <- paste0(
-  "**Figure S4.** Two-pollutant model with NO<sup>2</sup> as the confounder. Association between SPM and all-cause",
+  "**Figure S7.** Two-pollutant model with NO<sup>2</sup> as the confounder. Association between SPM and all-cause",
   " respiratory and cardiovascular mortality by quantiles (low or high) determined by levels of pollen cutoffs",
   " (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50, 75 grains per cm<sup>2</sup>) during the",
   " spring months (February to April) from 1989 to 2014. RR on the y-axis is defined as the relative risk per",
@@ -1332,7 +1444,7 @@ plotS4 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS4_nocaption.pdf"),
+    filename = paste0(root_dir, "/plots/figureS7_nocaption.pdf"),
     plot = plotS4,
     device = "pdf",
     width = 10,
@@ -1350,7 +1462,7 @@ plotS4 <- plot_grid(
 )
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS4.pdf"),
+    filename = paste0(root_dir, "/plots/figureS7.pdf"),
     plot = plotS4,
     device = "pdf",
     width = 10,
@@ -1360,7 +1472,7 @@ plotS4 <- plot_grid(
   )
 }
 
-# figure S5 -------------------------------------------------------------------------------------------------------
+# figure S8 -------------------------------------------------------------------------------------------------------
 
 # params
 tmp <- do.call(rbind, c(data_5, data_6))
@@ -1373,7 +1485,7 @@ cutoffs_vec_perc <- c(75, 80, 85)
 cutoffs_vec_abs <- c(25, 50, 75)
 debug <- FALSE
 caption_text <- paste0(
-  "**Figure S5.** Two-pollutant model with SO<sup>2</sup> as the confounder. Association between SPM and all-cause,",
+  "**Figure S8.** Two-pollutant model with SO<sup>2</sup> as the confounder. Association between SPM and all-cause,",
   " respiratory and cardiovascular mortality by quantiles (low or high) determined by levels of pollen cutoffs",
   " (75<sup>th</sup>, 80<sup>th</sup>, 85<sup>th</sup>) and count (25, 50, 75 grains per cm<sup>2</sup>) during the",
   " spring months (February to April) from 1989 to 2014. RR on the y-axis is defined as the relative risk per",
@@ -1507,7 +1619,7 @@ plotS5 <- {
 }
 {
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS5_nocaption.pdf"),
+    filename = paste0(root_dir, "/plots/figureS8_nocaption.pdf"),
     plot = plotS5,
     device = "pdf",
     width = 10,
@@ -1525,7 +1637,7 @@ plotS5 <- plot_grid(
 )
 { 
   ggsave(
-    filename = paste0(root_dir, "/plots/figureS5.pdf"),
+    filename = paste0(root_dir, "/plots/figureS8.pdf"),
     plot = plotS5,
     device = "pdf",
     width = 10,
@@ -1534,6 +1646,12 @@ plotS5 <- plot_grid(
     dpi = 300
   )
 }
+
+# figure S5 -------------------------------------------------------------------------------------------------------
+
+# TODO: Figure S5 (whole population, pollen data analyzed WITHOUT imputation of missing measurements) is not
+# generated by this repository yet. tmp/create-nonimputed-pollen-data.R builds the non-imputed pollen series but
+# does not save, model, or plot it. The submitted figureS5.pdf (2026-08-03 revision) came from code outside this repo.
 
 # figure S6 -------------------------------------------------------------------------------------------------------
 
@@ -1607,7 +1725,10 @@ a <- ggplot(data_seasonal, aes(x = seasonal_df, y = qaic)) +
 # Plot 2: seasonal_df vs rr with error bars (cil and ciu)
 b <- ggplot(data_seasonal, aes(x = seasonal_df, y = rr)) +
   geom_point(size = 2.5, color = "red") +
-  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  scale_y_continuous(
+    limits = c(y_lower_bound, y_upper_bound),
+    labels = function(x) formatC(x, format = "f", digits = 2)
+  ) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
@@ -1621,7 +1742,10 @@ c <- ggplot(data_temperature, aes(x = temperature_df, y = qaic)) +
 # Plot 4: temperature_df vs rr with error bars (cil and ciu)
 d <- ggplot(data_temperature, aes(x = temperature_df, y = rr)) +
   geom_point(size = 2.5, color = "red") +
-  scale_y_continuous(limits = c(y_lower_bound, y_upper_bound)) +
+  scale_y_continuous(
+    limits = c(y_lower_bound, y_upper_bound),
+    labels = function(x) formatC(x, format = "f", digits = 2)
+  ) +
   geom_errorbar(aes(ymin = cil, ymax = ciu), width = 0.2) +
   labs(x = "Degrees of Freedom", y = "Relative Risk", title = " ") +
   theme_classic()
@@ -1670,3 +1794,4 @@ plotS6 <- plot_grid(
     dpi = 300
   )
 }
+
